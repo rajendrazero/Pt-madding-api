@@ -1,21 +1,6 @@
-// // This is your Prisma schema file,
-// // learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
-// generator client {
-//   provider = "prisma-client-js"
-//   output   = "../src/generated/prisma"
-// }
-
-// datasource db {
-//   provider = "postgresql"
-//   url      = env("DATABASE_URL")
-// }
-
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -24,15 +9,60 @@ datasource db {
 }
 
 model User {
-  id       Int    @id @default(autoincrement())
-  email    String @unique
-  password String
-  role     String @default("user") // admin / user
+  id          String   @id @default(uuid()) // UUID sebagai ID
+  username    String   @unique
+  email       String   @unique
+  password    String
+  role        String   @default("user")
+  isVerified  Boolean  @default(false)
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  ratings     Rating[] @relation("UserRatings")
+  comments    Comment[] @relation("UserComments")
+  items       Item[] @relation("UserItems")
 }
 
 model Item {
-  id          Int    @id @default(autoincrement())
-  name        String
+  id          String   @id @default(uuid()) // UUID sebagai ID
+  title       String
+  slug        String   @unique
   description String
-  image       String
+  imageUrl    String?
+  isPublished Boolean  @default(true)
+  isDeleted   Boolean  @default(false)
+  createdBy   String?  @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User?    @relation("UserItems", fields: [createdBy], references: [id])
+  ratings     Rating[] @relation("ItemRatings")
+  comments    Comment[] @relation("ItemComments")
+}
+
+model Rating {
+  id        String   @id @default(uuid()) // UUID sebagai ID
+  userId    String   @db.Uuid
+  itemId    String   @db.Uuid
+  rating    Int      @db.Check('rating BETWEEN 1 AND 5')
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation("UserRatings", fields: [userId], references: [id])
+  item      Item     @relation("ItemRatings", fields: [itemId], references: [id])
+
+  @@unique([userId, itemId]) // Pastikan satu user hanya bisa memberi rating pada satu item sekali
+}
+
+model Comment {
+  id        String   @id @default(uuid()) // UUID sebagai ID
+  userId    String   @db.Uuid
+  itemId    String   @db.Uuid
+  comment   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation("UserComments", fields: [userId], references: [id])
+  item      Item     @relation("ItemComments", fields: [itemId], references: [id])
 }
