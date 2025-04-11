@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+var express_1 = require("express");
+var item_route_1 = require("./routes/item.route");
+var rating_route_1 = require("./routes/rating.route");
+var comment_route_1 = require("./routes/comment.route");
+var app = (0, express_1.default)();
+app.use(express_1.default.json());
+app.use('/api/items', item_route_1.default);
+app.use('/api/ratings', rating_route_1.default);
+app.use('/api/comments', comment_route_1.default);
+exports.default = app;

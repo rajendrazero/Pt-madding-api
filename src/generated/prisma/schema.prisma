@@ -1,0 +1,75 @@
+// Prisma schema for PT-Madding App
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma" // Bisa diubah sesuai kebutuhan
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id @default(uuid())
+  username   String   @unique
+  email      String   @unique
+  password   String
+  role       String   @default("user")
+  isVerified Boolean  @default(false)
+  isDeleted  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // relasi
+  items    Item[]    @relation("UserItems")
+  ratings  Rating[]
+  comments Comment[]
+}
+
+model Item {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  description String
+  imageUrl    String?
+  isPublished Boolean  @default(true)
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // relasi
+  createdBy   User?     @relation("UserItems", fields: [createdById], references: [id])
+  createdById String?
+  ratings     Rating[]
+  comments    Comment[]
+}
+
+model Rating {
+  id        String   @id @default(uuid())
+  rating    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // relasi
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  item   Item   @relation(fields: [itemId], references: [id])
+  itemId String
+
+  @@unique([userId, itemId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  comment   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // relasi
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  item   Item   @relation(fields: [itemId], references: [id])
+  itemId String
+}
