@@ -1,6 +1,7 @@
+// Prisma schema for PT-Madding App
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  output   = "../src/generated/prisma" // Bisa diubah sesuai kebutuhan
 }
 
 datasource db {
@@ -9,36 +10,38 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(uuid()) // UUID sebagai ID
-  username    String   @unique
-  email       String   @unique
+  id          String     @id @default(uuid())
+  username    String     @unique
+  email       String     @unique
   password    String
-  role        String   @default("user")
-  isVerified  Boolean  @default(false)
-  isDeleted   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  role        String     @default("user")
+  isVerified  Boolean    @default(false)
+  isDeleted   Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
-  ratings     Rating[] @relation("UserRatings")
-  comments    Comment[] @relation("UserComments")
-  items       Item[] @relation("UserItems")
+  // relasi
+  items       Item[]     @relation("UserItems")
+  ratings     Rating[]
+  comments    Comment[]
 }
 
 model Item {
-  id          String   @id @default(uuid()) // UUID sebagai ID
+  id          String     @id @default(uuid())
   title       String
-  slug        String   @unique
+  slug        String     @unique
   description String
   imageUrl    String?
-  isPublished Boolean  @default(true)
-  isDeleted   Boolean  @default(false)
-  createdBy   String?  @db.Uuid
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isPublished Boolean    @default(true)
+  isDeleted   Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
-  user        User?    @relation("UserItems", fields: [createdBy], references: [id])
-  ratings     Rating[] @relation("ItemRatings")
-  comments    Comment[] @relation("ItemComments")
+  // relasi
+  createdBy   User?      @relation("UserItems", fields: [createdById], references: [id])
+  createdById String?
+  ratings     Rating[]
+  comments    Comment[]
 }
 
 model Rating {
@@ -54,18 +57,19 @@ model Rating {
   item      Item     @relation(fields: [itemId], references: [id])
   itemId    String
 
-  // Constraints bisa dilakukan pada level aplikasi (validasi rating antara 1 hingga 5)
   @@unique([userId, itemId])
 }
 
 model Comment {
-  id        String   @id @default(uuid()) // UUID sebagai ID
-  userId    String   @db.Uuid
-  itemId    String   @db.Uuid
+  id        String   @id @default(uuid())
   comment   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User     @relation("UserComments", fields: [userId], references: [id])
-  item      Item     @relation("ItemComments", fields: [itemId], references: [id])
+  // relasi
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+
+  item      Item     @relation(fields: [itemId], references: [id])
+  itemId    String
 }
