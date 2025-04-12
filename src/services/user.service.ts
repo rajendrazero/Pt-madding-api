@@ -29,3 +29,46 @@ export async function insertUser({
     [id, username, email, password]
   );
 }
+
+
+export async function updateUserById({
+  id,
+  username,
+  email,
+  password,
+}: {
+  id: string;
+  username?: string;
+  email?: string;
+  password?: string;
+}) {
+  const fields = [];
+  const values = [];
+  let idx = 1;
+
+  if (username) {
+    fields.push(`username = $${idx++}`);
+    values.push(username);
+  }
+  if (email) {
+    fields.push(`email = $${idx++}`);
+    values.push(email);
+  }
+  if (password) {
+    fields.push(`password = $${idx++}`);
+    values.push(password);
+  }
+
+  if (fields.length === 0) return;
+
+  values.push(id);
+  const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx}`;
+  await pool.query(query, values);
+}
+
+export async function softDeleteUserById(id: string) {
+  await pool.query(
+    `UPDATE users SET is_deleted = true WHERE id = $1`,
+    [id]
+  );
+}

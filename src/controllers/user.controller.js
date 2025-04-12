@@ -36,7 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createUser = exports.getAllUsers = void 0;
+exports.deleteUser = exports.updateUser = exports.createUser = exports.getAllUsers = void 0;
 var user_service_1 = require("../services/user.service");
 var uuid_1 = require("uuid");
 /**
@@ -96,3 +96,56 @@ var createUser = function (req, res) { return __awaiter(void 0, void 0, void 0, 
     });
 }); };
 exports.createUser = createUser;
+var updateUser = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
+    var id, _a, username, email, password, error_3;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                id = req.params.id;
+                _a = req.body, username = _a.username, email = _a.email, password = _a.password;
+                if (!username && !email && !password) {
+                    res.status(400).json({ error: 'Tidak ada data yang dikirim' });
+                    return [2 /*return*/];
+                }
+                _b.label = 1;
+            case 1:
+                _b.trys.push([1, 3, , 4]);
+                return [4 /*yield*/, (0, user_service_1.updateUserById)({ id: id, username: username, email: email, password: password })];
+            case 2:
+                _b.sent();
+                res.status(200).json({ message: 'User berhasil diupdate' });
+                return [3 /*break*/, 4];
+            case 3:
+                error_3 = _b.sent();
+                console.error('Gagal update user:', error_3);
+                res.status(500).json({ error: 'Gagal update user' });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); };
+exports.updateUser = updateUser;
+var deleteUser = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var id, error_4;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                id = req.params.id;
+                _a.label = 1;
+            case 1:
+                _a.trys.push([1, 3, , 4]);
+                return [4 /*yield*/, (0, user_service_1.softDeleteUserById)(id)];
+            case 2:
+                _a.sent();
+                res.status(200).json({ message: 'User berhasil dihapus (soft delete)' });
+                return [3 /*break*/, 4];
+            case 3:
+                error_4 = _a.sent();
+                console.error('Gagal hapus user:', error_4);
+                res.status(500).json({ error: 'Gagal hapus user' });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); };
+exports.deleteUser = deleteUser;

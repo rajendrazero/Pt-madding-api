@@ -36,7 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.insertUser = exports.fetchAllUsers = void 0;
+exports.softDeleteUserById = exports.updateUserById = exports.insertUser = exports.fetchAllUsers = void 0;
 var db_1 = require("../utils/db");
 // Pool adalah koneksi ke PostgreSQL
 function fetchAllUsers() {
@@ -67,3 +67,51 @@ function insertUser(_a) {
     });
 }
 exports.insertUser = insertUser;
+function updateUserById(_a) {
+    var id = _a.id, username = _a.username, email = _a.email, password = _a.password;
+    return __awaiter(this, void 0, void 0, function () {
+        var fields, values, idx, query;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
+                case 0:
+                    fields = [];
+                    values = [];
+                    idx = 1;
+                    if (username) {
+                        fields.push("username = $".concat(idx++));
+                        values.push(username);
+                    }
+                    if (email) {
+                        fields.push("email = $".concat(idx++));
+                        values.push(email);
+                    }
+                    if (password) {
+                        fields.push("password = $".concat(idx++));
+                        values.push(password);
+                    }
+                    if (fields.length === 0)
+                        return [2 /*return*/];
+                    values.push(id);
+                    query = "UPDATE users SET ".concat(fields.join(', '), " WHERE id = $").concat(idx);
+                    return [4 /*yield*/, db_1.pool.query(query, values)];
+                case 1:
+                    _b.sent();
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+exports.updateUserById = updateUserById;
+function softDeleteUserById(id) {
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, db_1.pool.query("UPDATE users SET is_deleted = true WHERE id = $1", [id])];
+                case 1:
+                    _a.sent();
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+exports.softDeleteUserById = softDeleteUserById;
