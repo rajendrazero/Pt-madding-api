@@ -3,14 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-// Import aplikasi Express yang kita buat di app.ts
-const app_1 = __importDefault(require("./app"));
-// Import variabel dari file .env
+const app_1 = __importDefault(require("./app")); // Import aplikasi Express yang sudah dibuat
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
-// Ambil PORT dari .env atau pakai default 3000
+// Import cron job agar dapat dijalankan saat server berjalan
+require("./utils/cron"); // Pastikan path ke cron.ts sudah benar
 const PORT = process.env.PORT || 3000;
-// Jalankan server
 app_1.default.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });

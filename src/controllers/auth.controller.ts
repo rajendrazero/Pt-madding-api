@@ -1,22 +1,48 @@
-import { Request, Response } from 'express';
-import { registerUser, loginUser } from '../services/auth.service';
+import { Request, Response, RequestHandler } from 'express';
+import * as AuthService from '../services/auth.service';
+import { registerSchema, verifyCodeSchema, resendCodeSchema } from '../validations/auth.validation';
+import { z } from 'zod';
 
-export const register = async (req: Request, res: Response) => {
-  try {
-    const { email, password } = req.body;
-    const user = await registerUser(email, password);
-    res.status(201).json({ message: 'Pendaftaran berhasil', user });
-  } catch (err: any) {
+// Fungsi untuk menangani error
+const handleError = (err: any, res: Response): void => {
+  if (err instanceof z.ZodError) {
+    res.status(400).json({ error: err.errors.map(e => e.message) });
+  } else if (err instanceof Error) {
     res.status(400).json({ error: err.message });
+  } else {
+    res.status(400).json({ error: 'Terjadi kesalahan tak dikenal' });
   }
 };
 
-export const login = async (req: Request, res: Response) => {
+// Register dan kirim kode verifikasi
+export const register: RequestHandler = async (req, res): Promise<void> => {
   try {
-    const { email, password } = req.body;
-    const result = await loginUser(email, password);
-    res.json({ message: 'Login berhasil', ...result });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    const { username, email, password } = registerSchema.parse(req.body);
+    await AuthService.registerUser(username, email, password);
+    res.status(200).json({ message: 'Registrasi berhasil. Kode verifikasi telah dikirim ke email.' });
+  } catch (err) {
+    handleError(err, res);
+  }
+};
+
+// Verifikasi kode
+export const verifyCode: RequestHandler = async (req, res): Promise<void> => {
+  try {
+    const { email, code } = verifyCodeSchema.parse(req.body);
+    await AuthService.verifyUserCode(email, code);
+    res.status(201).json({ message: 'Registrasi berhasil dan akun telah diverifikasi' });
+  } catch (err) {
+    handleError(err, res);
+  }
+};
+
+// Kirim ulang kode verifikasi
+export const resendCode: RequestHandler = async (req, res): Promise<void> => {
+  try {
+    const { email } = resendCodeSchema.parse(req.body);
+    await AuthService.resendVerificationCode(email);
+    res.status(200).json({ message: 'Kode verifikasi berhasil dikirim ulang' });
+  } catch (err) {
+    handleError(err, res);
   }
 };

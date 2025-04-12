@@ -1,118 +1,161 @@
-import { Request, Response } from 'express';
-import { createUserSchema, updateUserSchema } from '../validations/user.validation';
-import {
-  fetchAllUsers,
-  insertUser,
-  updateUserById,
-  softDeleteUserById,
-  getUsersWithFilterAndPagination,
-  findUserById
+import { Request, Response, RequestHandler } from 'express';
+import { 
+fetchAllUsers, 
+updateUserById, 
+softDeleteUserById,
+getUsersWithFilterAndPagination,
+recoverUserById,
 } from '../services/user.service';
 import { v4 as uuidv4 } from 'uuid';
+import { createUserSchema, updateUserSchema } from
+'../validations/user.validation';
 import { z } from 'zod';
-import bcrypt from 'bcrypt';
+import { pool } from '../utils/db'; 
 
-export const getAllUsers = async (req: Request, res: Response) => {
+
+/**
+ * Handler untuk mengambil semua user dari database
+ */
+export const getAllUsers: RequestHandler = async (req, res) => {
   try {
-    const users = await fetchAllUsers();
-    res.status(200).json({ success: true, data: users });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Gagal mengambil data pengguna.', error: err });
+    const users = await fetchAllUsers(); // Ambil semua user dari service
+    res.status(200).json(users);         // Kirim response 200 OK dengan data user
+  } catch (error) {
+    console.error('Gagal mengambil user:', error); // Logging jika error
+    res.status(500).json({ error: 'Internal Server Error' }); // Kirim response 500
   }
 };
 
-export const createUser = async (req: Request, res: Response) => {
+export const updateUser = async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+
   try {
-    const parsed = createUserSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ success: false, errors: parsed.error.flatten().fieldErrors });
+    const parsed = updateUserSchema.parse(req.body); // Validasi update
+    await updateUserById({ id, ...parsed });
+    res.status(200).json({ message: 'User berhasil diupdate' });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: error.errors.map(e => e.message) });
+      return;
     }
-
-    const { username, email, password } = parsed.data;
-    const id = uuidv4();
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    await insertUser({ id, username, email, password: hashedPassword });
-
-    res.status(201).json({ success: true, message: 'Pengguna berhasil ditambahkan.' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Gagal menambahkan pengguna.', error: err });
-  }
-};
-
-
-export const updateUser = async (req: Request, res: Response) => {
-  try {
-    // Convert id dari string ke number
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).json({ success: false, message: 'ID tidak valid.' });
-    }
-
-    // Cek apakah user ada dan belum dihapus
-    const existingUser = await findUserById(id);
-    if (!existingUser || existingUser.isDeleted) {
-      return res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan atau sudah dihapus.' });
-    }
-
-    // Validasi data request body
-    const parsed = updateUserSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ success: false, errors: parsed.error.flatten().fieldErrors });
-    }
-
-    const { username, email, password } = parsed.data;
-
-    // Hash password jika ada
-    const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
-
-    // Update data user
-    const updated = await updateUserById(id, {
-      username,
-      email,
-      ...(hashedPassword && { password: hashedPassword }),
-    });
-
-    res.status(200).json({ success: true, message: 'Pengguna berhasil diperbarui.', data: updated });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Gagal memperbarui pengguna.', error: err });
+    console.error('Gagal update user:', error);
+    res.status(500).json({ error: 'Gagal update user' });
   }
 };
 
 
-export const deleteUser = async (req: Request, res: Response) => {
+export const deleteUser: RequestHandler = async (req, res) => {
+  const { id } = req.params;
+
   try {
-    const { id } = req.params;
-
-    const existingUser = await findUserById(id);
-    if (!existingUser || existingUser.isDeleted) {
-      return res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan atau sudah dihapus.' });
-    }
-
     await softDeleteUserById(id);
-    res.status(200).json({ success: true, message: 'Pengguna berhasil dihapus (soft delete).' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Gagal menghapus pengguna.', error: err });
+    res.status(200).json({ message: 'User berhasil dihapus (soft delete)' });
+  } catch (error) {
+    console.error('Gagal hapus user:', error);
+    res.status(500).json({ error: 'Gagal hapus user' });
   }
 };
 
 
-export const getUsersWithFilters = async (req: Request, res: Response) => {
+export const getUsersPaginated: RequestHandler = async (req, res) => {
   try {
-    const { keyword, role, isVerified, page, limit } = req.query;
+    const {
+      keyword,
+      role,
+      is_verified,
+      page = '1',
+      limit = '10'
+    } = req.query;
 
-    const users = await getUsersWithFilterAndPagination({
-      keyword: keyword as string,
-      role: role as string,
-      isVerified: isVerified === 'true' ? true : isVerified === 'false' ? false : undefined,
-      page: page ? parseInt(page as string) : 1,
-      limit: limit ? parseInt(limit as string) : 10
+    const data = await getUsersWithFilterAndPagination({
+      keyword: keyword?.toString(),
+      role: role?.toString(),
+      is_verified: is_verified === 'true' ? true : is_verified === 'false' ? false : undefined,
+      page: parseInt(page as string),
+      limit: parseInt(limit as string)
     });
 
-    res.status(200).json({ success: true, ...users });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Gagal mengambil data pengguna dengan filter.', error: err });
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('Gagal filter + pagination:', error);
+    res.status(500).json({ error: 'Terjadi kesalahan saat filter data user' });
   }
 };
 
 
+export const recoverUser: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  try {
+    await recoverUserById(id);
+    res.status(200).json({ message: 'User berhasil dipulihkan' });
+  } catch (error) {
+    console.error('Gagal recovery user:', error);
+    res.status(500).json({ error: 'Gagal memulihkan user' });
+  }
+};
+
+
+export const getDeletedUsers: RequestHandler = async (req, res): Promise<void> => {
+  try {
+    const {
+      keyword,
+      role,
+      is_verified,
+      page = '1',
+      limit = '10'
+    } = req.query;
+
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const offset = (pageNum - 1) * limitNum;
+
+    const values: any[] = [];
+    const filters: string[] = ['is_deleted = true'];
+    let idx = 1;
+
+    if (keyword) {
+      filters.push(`(username ILIKE $${idx} OR email ILIKE $${idx})`);
+      values.push(`%${keyword}%`);
+      idx++;
+    }
+
+    if (role) {
+      filters.push(`role = $${idx}`);
+      values.push(role);
+      idx++;
+    }
+
+    if (typeof is_verified === 'boolean' || is_verified === 'true' || is_verified === 'false') {
+      filters.push(`is_verified = $${idx}`);
+      values.push(is_verified === 'true');
+      idx++;
+    }
+
+    const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
+
+    const countQuery = `SELECT COUNT(*) FROM users ${whereClause}`;
+    const countRes = await pool.query(countQuery, values);
+    const total = parseInt(countRes.rows[0].count, 10);
+
+    const dataQuery = `
+      SELECT id, username, email, role, is_verified, created_at
+      FROM users
+      ${whereClause}
+      ORDER BY created_at DESC
+      LIMIT $${idx} OFFSET $${idx + 1}
+    `;
+    const dataRes = await pool.query(dataQuery, [...values, limitNum, offset]);
+
+    res.status(200).json({
+      data: dataRes.rows,
+      total,
+      currentPage: pageNum,
+      totalPages: Math.ceil(total / limitNum),
+    });
+
+  } catch (error) {
+    console.error('Gagal ambil user terhapus:', error);
+    res.status(500).json({ error: 'Terjadi kesalahan saat ambil user terhapus' });
+  }
+};

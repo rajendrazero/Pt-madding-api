@@ -46,14 +46,26 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUsersWithFilters = exports.deleteUser = exports.updateUser = exports.createUser = exports.getAllUsers = void 0;
-var user_validation_1 = require("../validations/user.validation");
+exports.getDeletedUsers = exports.recoverUser = exports.getUsersPaginated = exports.deleteUser = exports.updateUser = exports.getAllUsers = void 0;
 var user_service_1 = require("../services/user.service");
-var uuid_1 = require("uuid");
-var bcrypt_1 = require("bcrypt");
+var user_validation_1 = require("../validations/user.validation");
+var zod_1 = require("zod");
+var db_1 = require("../utils/db");
+/**
+ * Handler untuk mengambil semua user dari database
+ */
 var getAllUsers = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var users, err_1;
+    var users, error_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -61,142 +73,175 @@ var getAllUsers = function (req, res) { return __awaiter(void 0, void 0, void 0,
                 return [4 /*yield*/, (0, user_service_1.fetchAllUsers)()];
             case 1:
                 users = _a.sent();
-                res.status(200).json({ success: true, data: users });
+                res.status(200).json(users); // Kirim response 200 OK dengan data user
                 return [3 /*break*/, 3];
             case 2:
-                err_1 = _a.sent();
-                res.status(500).json({ success: false, message: 'Gagal mengambil data pengguna.', error: err_1 });
+                error_1 = _a.sent();
+                console.error('Gagal mengambil user:', error_1); // Logging jika error
+                res.status(500).json({ error: 'Internal Server Error' }); // Kirim response 500
                 return [3 /*break*/, 3];
             case 3: return [2 /*return*/];
         }
     });
 }); };
 exports.getAllUsers = getAllUsers;
-var createUser = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var parsed, _a, username, email, password, id, hashedPassword, err_2;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
+var updateUser = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
+    var id, parsed, error_2;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
             case 0:
-                _b.trys.push([0, 3, , 4]);
-                parsed = user_validation_1.createUserSchema.safeParse(req.body);
-                if (!parsed.success) {
-                    return [2 /*return*/, res.status(400).json({ success: false, errors: parsed.error.flatten().fieldErrors })];
-                }
-                _a = parsed.data, username = _a.username, email = _a.email, password = _a.password;
-                id = (0, uuid_1.v4)();
-                return [4 /*yield*/, bcrypt_1.default.hash(password, 10)];
+                id = req.params.id;
+                _a.label = 1;
             case 1:
-                hashedPassword = _b.sent();
-                return [4 /*yield*/, (0, user_service_1.insertUser)({ id: id, username: username, email: email, password: hashedPassword })];
+                _a.trys.push([1, 3, , 4]);
+                parsed = user_validation_1.updateUserSchema.parse(req.body);
+                return [4 /*yield*/, (0, user_service_1.updateUserById)(__assign({ id: id }, parsed))];
             case 2:
-                _b.sent();
-                res.status(201).json({ success: true, message: 'Pengguna berhasil ditambahkan.' });
+                _a.sent();
+                res.status(200).json({ message: 'User berhasil diupdate' });
                 return [3 /*break*/, 4];
             case 3:
-                err_2 = _b.sent();
-                res.status(500).json({ success: false, message: 'Gagal menambahkan pengguna.', error: err_2 });
+                error_2 = _a.sent();
+                if (error_2 instanceof zod_1.z.ZodError) {
+                    res.status(400).json({ error: error_2.errors.map(function (e) { return e.message; }) });
+                    return [2 /*return*/];
+                }
+                console.error('Gagal update user:', error_2);
+                res.status(500).json({ error: 'Gagal update user' });
                 return [3 /*break*/, 4];
             case 4: return [2 /*return*/];
         }
     });
 }); };
-exports.createUser = createUser;
-var updateUser = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var id, existingUser, parsed, _a, username, email, password, hashedPassword, _b, updated, err_3;
-    return __generator(this, function (_c) {
-        switch (_c.label) {
-            case 0:
-                _c.trys.push([0, 6, , 7]);
-                id = parseInt(req.params.id);
-                if (isNaN(id)) {
-                    return [2 /*return*/, res.status(400).json({ success: false, message: 'ID tidak valid.' })];
-                }
-                return [4 /*yield*/, (0, user_service_1.findUserById)(id)];
-            case 1:
-                existingUser = _c.sent();
-                if (!existingUser || existingUser.isDeleted) {
-                    return [2 /*return*/, res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan atau sudah dihapus.' })];
-                }
-                parsed = user_validation_1.updateUserSchema.safeParse(req.body);
-                if (!parsed.success) {
-                    return [2 /*return*/, res.status(400).json({ success: false, errors: parsed.error.flatten().fieldErrors })];
-                }
-                _a = parsed.data, username = _a.username, email = _a.email, password = _a.password;
-                if (!password) return [3 /*break*/, 3];
-                return [4 /*yield*/, bcrypt_1.default.hash(password, 10)];
-            case 2:
-                _b = _c.sent();
-                return [3 /*break*/, 4];
-            case 3:
-                _b = undefined;
-                _c.label = 4;
-            case 4:
-                hashedPassword = _b;
-                return [4 /*yield*/, (0, user_service_1.updateUserById)(id, __assign({ username: username, email: email }, (hashedPassword && { password: hashedPassword })))];
-            case 5:
-                updated = _c.sent();
-                res.status(200).json({ success: true, message: 'Pengguna berhasil diperbarui.', data: updated });
-                return [3 /*break*/, 7];
-            case 6:
-                err_3 = _c.sent();
-                res.status(500).json({ success: false, message: 'Gagal memperbarui pengguna.', error: err_3 });
-                return [3 /*break*/, 7];
-            case 7: return [2 /*return*/];
-        }
-    });
-}); };
 exports.updateUser = updateUser;
 var deleteUser = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var id, existingUser, err_4;
+    var id, error_3;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                _a.trys.push([0, 3, , 4]);
                 id = req.params.id;
-                return [4 /*yield*/, (0, user_service_1.findUserById)(id)];
+                _a.label = 1;
             case 1:
-                existingUser = _a.sent();
-                if (!existingUser || existingUser.isDeleted) {
-                    return [2 /*return*/, res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan atau sudah dihapus.' })];
-                }
+                _a.trys.push([1, 3, , 4]);
                 return [4 /*yield*/, (0, user_service_1.softDeleteUserById)(id)];
             case 2:
                 _a.sent();
-                res.status(200).json({ success: true, message: 'Pengguna berhasil dihapus (soft delete).' });
+                res.status(200).json({ message: 'User berhasil dihapus (soft delete)' });
                 return [3 /*break*/, 4];
             case 3:
-                err_4 = _a.sent();
-                res.status(500).json({ success: false, message: 'Gagal menghapus pengguna.', error: err_4 });
+                error_3 = _a.sent();
+                console.error('Gagal hapus user:', error_3);
+                res.status(500).json({ error: 'Gagal hapus user' });
                 return [3 /*break*/, 4];
             case 4: return [2 /*return*/];
         }
     });
 }); };
 exports.deleteUser = deleteUser;
-var getUsersWithFilters = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a, keyword, role, isVerified, page, limit, users, err_5;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
+var getUsersPaginated = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var _a, keyword, role, is_verified, _b, page, _c, limit, data, error_4;
+    return __generator(this, function (_d) {
+        switch (_d.label) {
             case 0:
-                _b.trys.push([0, 2, , 3]);
-                _a = req.query, keyword = _a.keyword, role = _a.role, isVerified = _a.isVerified, page = _a.page, limit = _a.limit;
+                _d.trys.push([0, 2, , 3]);
+                _a = req.query, keyword = _a.keyword, role = _a.role, is_verified = _a.is_verified, _b = _a.page, page = _b === void 0 ? '1' : _b, _c = _a.limit, limit = _c === void 0 ? '10' : _c;
                 return [4 /*yield*/, (0, user_service_1.getUsersWithFilterAndPagination)({
-                        keyword: keyword,
-                        role: role,
-                        isVerified: isVerified === 'true' ? true : isVerified === 'false' ? false : undefined,
-                        page: page ? parseInt(page) : 1,
-                        limit: limit ? parseInt(limit) : 10
+                        keyword: keyword === null || keyword === void 0 ? void 0 : keyword.toString(),
+                        role: role === null || role === void 0 ? void 0 : role.toString(),
+                        is_verified: is_verified === 'true' ? true : is_verified === 'false' ? false : undefined,
+                        page: parseInt(page),
+                        limit: parseInt(limit)
                     })];
             case 1:
-                users = _b.sent();
-                res.status(200).json(__assign({ success: true }, users));
+                data = _d.sent();
+                res.status(200).json(data);
                 return [3 /*break*/, 3];
             case 2:
-                err_5 = _b.sent();
-                res.status(500).json({ success: false, message: 'Gagal mengambil data pengguna dengan filter.', error: err_5 });
+                error_4 = _d.sent();
+                console.error('Gagal filter + pagination:', error_4);
+                res.status(500).json({ error: 'Terjadi kesalahan saat filter data user' });
                 return [3 /*break*/, 3];
             case 3: return [2 /*return*/];
         }
     });
 }); };
-exports.getUsersWithFilters = getUsersWithFilters;
+exports.getUsersPaginated = getUsersPaginated;
+var recoverUser = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
+    var id, error_5;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                id = req.params.id;
+                _a.label = 1;
+            case 1:
+                _a.trys.push([1, 3, , 4]);
+                return [4 /*yield*/, (0, user_service_1.recoverUserById)(id)];
+            case 2:
+                _a.sent();
+                res.status(200).json({ message: 'User berhasil dipulihkan' });
+                return [3 /*break*/, 4];
+            case 3:
+                error_5 = _a.sent();
+                console.error('Gagal recovery user:', error_5);
+                res.status(500).json({ error: 'Gagal memulihkan user' });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); };
+exports.recoverUser = recoverUser;
+var getDeletedUsers = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
+    var _a, keyword, role, is_verified, _b, page, _c, limit, pageNum, limitNum, offset, values, filters, idx, whereClause, countQuery, countRes, total, dataQuery, dataRes, error_6;
+    return __generator(this, function (_d) {
+        switch (_d.label) {
+            case 0:
+                _d.trys.push([0, 3, , 4]);
+                _a = req.query, keyword = _a.keyword, role = _a.role, is_verified = _a.is_verified, _b = _a.page, page = _b === void 0 ? '1' : _b, _c = _a.limit, limit = _c === void 0 ? '10' : _c;
+                pageNum = parseInt(page);
+                limitNum = parseInt(limit);
+                offset = (pageNum - 1) * limitNum;
+                values = [];
+                filters = ['is_deleted = true'];
+                idx = 1;
+                if (keyword) {
+                    filters.push("(username ILIKE $".concat(idx, " OR email ILIKE $").concat(idx, ")"));
+                    values.push("%".concat(keyword, "%"));
+                    idx++;
+                }
+                if (role) {
+                    filters.push("role = $".concat(idx));
+                    values.push(role);
+                    idx++;
+                }
+                if (typeof is_verified === 'boolean' || is_verified === 'true' || is_verified === 'false') {
+                    filters.push("is_verified = $".concat(idx));
+                    values.push(is_verified === 'true');
+                    idx++;
+                }
+                whereClause = filters.length ? "WHERE ".concat(filters.join(' AND ')) : '';
+                countQuery = "SELECT COUNT(*) FROM users ".concat(whereClause);
+                return [4 /*yield*/, db_1.pool.query(countQuery, values)];
+            case 1:
+                countRes = _d.sent();
+                total = parseInt(countRes.rows[0].count, 10);
+                dataQuery = "\n      SELECT id, username, email, role, is_verified, created_at\n      FROM users\n      ".concat(whereClause, "\n      ORDER BY created_at DESC\n      LIMIT $").concat(idx, " OFFSET $").concat(idx + 1, "\n    ");
+                return [4 /*yield*/, db_1.pool.query(dataQuery, __spreadArray(__spreadArray([], values, true), [limitNum, offset], false))];
+            case 2:
+                dataRes = _d.sent();
+                res.status(200).json({
+                    data: dataRes.rows,
+                    total: total,
+                    currentPage: pageNum,
+                    totalPages: Math.ceil(total / limitNum),
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_6 = _d.sent();
+                console.error('Gagal ambil user terhapus:', error_6);
+                res.status(500).json({ error: 'Terjadi kesalahan saat ambil user terhapus' });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); };
+exports.getDeletedUsers = getDeletedUsers;

@@ -1,32 +1,20 @@
-import express from 'express';
+import { Router } from 'express';
 import {
-  createUser,
-  updateUser,
-  getAllUsers,
-  deleteUser,
-  getUsersWithFilters,
-} from '../controllers/user.controller';
-import { validate } from '../middlewares/validate';
-import {
-  createUserSchema,
-  updateUserSchema,
-} from '../validations/user.validation';
+getAllUsers,
+updateUser,
+deleteUser, 
+getUsersPaginated, recoverUser,
+  getDeletedUsers
+} from
+'../controllers/user.controller';
 
-const router = express.Router();
+const router = Router();
 
-// Ambil semua user
 router.get('/', getAllUsers);
-
-// Ambil user dengan filter (keyword, role, isVerified, dll)
-router.get('/filter', getUsersWithFilters);
-
-// Tambah user baru, divalidasi dengan schema Zod
-router.post('/', validate(createUserSchema), createUser);
-
-// Update user berdasarkan ID, divalidasi juga
-router.put('/:id', validate(updateUserSchema), updateUser);
-
-// Hapus user (soft delete)
-router.delete('/:id', deleteUser);
+router.put('/:id', updateUser);     
+router.delete('/:id', deleteUser);   
+router.get('/search', getUsersPaginated);
+router.patch('/users/:id/recover', recoverUser);
+router.get('/users/deleted', getDeletedUsers);
 
 export default router;

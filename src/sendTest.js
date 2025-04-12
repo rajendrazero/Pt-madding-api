@@ -36,85 +36,59 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.resendCode = exports.verifyCode = exports.register = void 0;
-var AuthService = require("../services/auth.service");
-var auth_validation_1 = require("../validations/auth.validation");
-var zod_1 = require("zod");
-// Fungsi untuk menangani error
-var handleError = function (err, res) {
-    if (err instanceof zod_1.z.ZodError) {
-        res.status(400).json({ error: err.errors.map(function (e) { return e.message; }) });
-    }
-    else if (err instanceof Error) {
-        res.status(400).json({ error: err.message });
-    }
-    else {
-        res.status(400).json({ error: 'Terjadi kesalahan tak dikenal' });
-    }
-};
-// Register dan kirim kode verifikasi
-var register = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var _a, username, email, password, err_1;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
-            case 0:
-                _b.trys.push([0, 2, , 3]);
-                _a = auth_validation_1.registerSchema.parse(req.body), username = _a.username, email = _a.email, password = _a.password;
-                return [4 /*yield*/, AuthService.registerUser(username, email, password)];
-            case 1:
-                _b.sent();
-                res.status(200).json({ message: 'Registrasi berhasil. Kode verifikasi telah dikirim ke email.' });
-                return [3 /*break*/, 3];
-            case 2:
-                err_1 = _b.sent();
-                handleError(err_1, res);
-                return [3 /*break*/, 3];
-            case 3: return [2 /*return*/];
-        }
-    });
-}); };
-exports.register = register;
-// Verifikasi kode
-var verifyCode = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var _a, email, code, err_2;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
-            case 0:
-                _b.trys.push([0, 2, , 3]);
-                _a = auth_validation_1.verifyCodeSchema.parse(req.body), email = _a.email, code = _a.code;
-                return [4 /*yield*/, AuthService.verifyUserCode(email, code)];
-            case 1:
-                _b.sent();
-                res.status(201).json({ message: 'Registrasi berhasil dan akun telah diverifikasi' });
-                return [3 /*break*/, 3];
-            case 2:
-                err_2 = _b.sent();
-                handleError(err_2, res);
-                return [3 /*break*/, 3];
-            case 3: return [2 /*return*/];
-        }
-    });
-}); };
-exports.verifyCode = verifyCode;
-// Kirim ulang kode verifikasi
-var resendCode = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var email, err_3;
+var nodemailer_1 = require("nodemailer");
+var dotenv_1 = require("dotenv");
+dotenv_1.default.config();
+// Konfigurasi transporter untuk menggunakan Gmail
+var transporter = nodemailer_1.default.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'rajendrasekolah@gmail.com',
+        pass: 'iwzqygdkiqviusbp', // Gantilah dengan App Password yang kamu buat di Google Account
+    },
+});
+// Fungsi untuk mengirim email
+var sendEmail = function (to, subject, text) { return __awaiter(void 0, void 0, void 0, function () {
+    var info, error_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 _a.trys.push([0, 2, , 3]);
-                email = auth_validation_1.resendCodeSchema.parse(req.body).email;
-                return [4 /*yield*/, AuthService.resendVerificationCode(email)];
+                return [4 /*yield*/, transporter.sendMail({
+                        from: 'rajendrasekolah@gmail.com',
+                        to: to,
+                        subject: subject,
+                        text: text,
+                    })];
             case 1:
-                _a.sent();
-                res.status(200).json({ message: 'Kode verifikasi berhasil dikirim ulang' });
+                info = _a.sent();
+                console.log('Email berhasil dikirim:', info.response);
                 return [3 /*break*/, 3];
             case 2:
-                err_3 = _a.sent();
-                handleError(err_3, res);
-                return [3 /*break*/, 3];
+                error_1 = _a.sent();
+                console.error('Gagal mengirim email:', error_1);
+                throw new Error('Gagal mengirim email');
             case 3: return [2 /*return*/];
         }
     });
 }); };
-exports.resendCode = resendCode;
+// Tes pengiriman email
+(function () { return __awaiter(void 0, void 0, void 0, function () {
+    var err_1;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                return [4 /*yield*/, sendEmail('rajendraathallahfawwaz08@gmail.com', 'Test Email', 'Halo, ini adalah percakapan tes pengiriman email!')];
+            case 1:
+                _a.sent();
+                console.log('Tes berhasil dikirim');
+                return [3 /*break*/, 3];
+            case 2:
+                err_1 = _a.sent();
+                console.error('Tes gagal:', err_1);
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); })();

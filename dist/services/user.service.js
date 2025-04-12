@@ -1,117 +1,100 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.findUserById = void 0;
 exports.fetchAllUsers = fetchAllUsers;
-exports.insertUser = insertUser;
 exports.updateUserById = updateUserById;
 exports.softDeleteUserById = softDeleteUserById;
 exports.getUsersWithFilterAndPagination = getUsersWithFilterAndPagination;
-const prismaClient_1 = require("../utils/prismaClient");
-const client_1 = require("@prisma/client");
-const findUserById = async (id) => {
-    return await prismaClient_1.prisma.user.findUnique({ where: { id } });
-};
-exports.findUserById = findUserById;
-// Mengambil semua user yang tidak dihapus (isDeleted false)
+exports.recoverUserById = recoverUserById;
+exports.deleteOldSoftDeletedUsers = deleteOldSoftDeletedUsers;
+const db_1 = require("../utils/db");
+// Pool adalah koneksi ke PostgreSQL
 async function fetchAllUsers() {
-    return await prismaClient_1.prisma.user.findMany({
-        where: { isDeleted: false },
-        select: {
-            id: true,
-            username: true,
-            email: true,
-            role: true,
-            isVerified: true,
-            createdAt: true,
-        },
-        orderBy: { createdAt: 'desc' },
-    });
+    const res = await db_1.pool.query(`
+    SELECT id, username, email, role, is_verified, created_at
+    FROM users
+    WHERE is_deleted = false
+  `);
+    return res.rows;
 }
-// Menambahkan user baru ke database
-async function insertUser(params) {
-    const { id, username, email, password, role = client_1.Role.user, isVerified = false } = params;
-    return await prismaClient_1.prisma.user.create({
-        data: {
-            id,
-            username,
-            email,
-            password,
-            role,
-            isVerified,
-        },
-    });
-}
-// Memperbarui data user berdasarkan ID
-async function updateUserById(params) {
-    const { id, username, email, password, role, isVerified } = params;
-    // Kumpulkan field yang akan diupdate
-    const data = {};
-    if (username)
-        data.username = username;
-    if (email)
-        data.email = email;
-    if (password)
-        data.password = password;
-    if (role)
-        data.role = role;
-    if (typeof isVerified === 'boolean')
-        data.isVerified = isVerified;
-    // Jika tidak ada field yang diupdate, lempar error atau kembalikan hasil
-    if (Object.keys(data).length === 0) {
-        throw new Error('Tidak ada data yang diperbarui.');
+async function updateUserById({ id, username, email, password, }) {
+    const fields = [];
+    const values = [];
+    let idx = 1;
+    if (username) {
+        fields.push(`username = $${idx++}`);
+        values.push(username);
     }
-    return await prismaClient_1.prisma.user.update({
-        where: { id },
-        data,
-    });
+    if (email) {
+        fields.push(`email = $${idx++}`);
+        values.push(email);
+    }
+    if (password) {
+        fields.push(`password = $${idx++}`);
+        values.push(password);
+    }
+    if (fields.length === 0)
+        return;
+    values.push(id);
+    const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx}`;
+    await db_1.pool.query(query, values);
 }
-// Melakukan soft delete pada user dengan merubah status isDeleted menjadi true
 async function softDeleteUserById(id) {
-    return await prismaClient_1.prisma.user.update({
-        where: { id },
-        data: { isDeleted: true },
-    });
+    await db_1.pool.query(`UPDATE users SET is_deleted = true WHERE id = $1`, [id]);
 }
-// Mengambil user berdasarkan filter dan pagination
-async function getUsersWithFilterAndPagination({ keyword, role, isVerified, page = 1, limit = 10, }) {
-    // Membuat filter dasar: hanya user yang belum dihapus
-    const filters = { isDeleted: false };
-    // Jika ada keyword, cari berdasarkan username atau email (pencarian case-insensitive)
+async function getUsersWithFilterAndPagination({ keyword, role, is_verified, page = 1, limit = 10 }) {
+    const values = [];
+    const filters = ['is_deleted = false'];
+    let idx = 1;
     if (keyword) {
-        filters.OR = [
-            { username: { contains: keyword, mode: 'insensitive' } },
-            { email: { contains: keyword, mode: 'insensitive' } },
-        ];
+        filters.push(`(username ILIKE $${idx} OR email ILIKE $${idx})`);
+        values.push(`%${keyword}%`);
+        idx++;
     }
-    // Jika filter role ditentukan, tambahkan ke filter
     if (role) {
-        filters.role = role;
+        filters.push(`role = $${idx}`);
+        values.push(role);
+        idx++;
     }
-    // Filter untuk status verifikasi
-    if (typeof isVerified === 'boolean') {
-        filters.isVerified = isVerified;
+    if (typeof is_verified === 'boolean') {
+        filters.push(`is_verified = $${idx}`);
+        values.push(is_verified);
+        idx++;
     }
-    // Hitung total user berdasarkan filter
-    const total = await prismaClient_1.prisma.user.count({ where: filters });
-    // Ambil data user dengan filter, diurutkan berdasarkan tanggal pembuatan (desc)
-    const users = await prismaClient_1.prisma.user.findMany({
-        where: filters,
-        select: {
-            id: true,
-            username: true,
-            email: true,
-            role: true,
-            isVerified: true,
-            createdAt: true,
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
-    });
+    const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
+    const offset = (page - 1) * limit;
+    // Ambil total count
+    const countQuery = `SELECT COUNT(*) FROM users ${whereClause}`;
+    const countRes = await db_1.pool.query(countQuery, values);
+    const total = parseInt(countRes.rows[0].count, 10);
+    // Ambil data pengguna
+    const dataQuery = `
+    SELECT id, username, email, role, is_verified, created_at
+    FROM users
+    ${whereClause}
+    ORDER BY created_at DESC
+    LIMIT $${idx} OFFSET $${idx + 1}
+  `;
+    const dataRes = await db_1.pool.query(dataQuery, [...values, limit, offset]);
     return {
-        data: users,
+        data: dataRes.rows,
         total,
         currentPage: page,
         totalPages: Math.ceil(total / limit),
     };
+}
+async function recoverUserById(id) {
+    await db_1.pool.query(`UPDATE users SET is_deleted = false WHERE id = $1`, [id]);
+}
+async function deleteOldSoftDeletedUsers() {
+    console.log('Menghapus pengguna soft-deleted lebih dari 3 menit');
+    try {
+        const result = await db_1.pool.query(`
+      DELETE FROM users
+      WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '3 MINUTE'
+    `);
+        console.log(`${result.rowCount} pengguna dihapus`);
+    }
+    catch (error) {
+        console.error('Error saat menghapus pengguna:', error);
+    }
 }

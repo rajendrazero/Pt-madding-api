@@ -36,51 +36,111 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.loginUser = exports.registerUser = void 0;
-var db_1 = require("../utils/db");
+exports.cleanUnverified = exports.resendVerificationCode = exports.verifyUserCode = exports.registerUser = void 0;
 var bcryptjs_1 = require("bcryptjs");
-var jwt_1 = require("../utils/jwt");
-var registerUser = function (email, password) { return __awaiter(void 0, void 0, void 0, function () {
-    var existingUser, hashed, newUser;
+var uuid_1 = require("uuid");
+var mailer_1 = require("../utils/mailer");
+var db_1 = require("../utils/db");
+// Generate random 6-digit code
+var generateVerificationCode = function () {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+};
+var registerUser = function (username, email, password) { return __awaiter(void 0, void 0, Promise, function () {
+    var existingUsers, id, hashedPassword, code;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, db_1.pool.query('SELECT * FROM "User" WHERE email = $1', [email])];
+            case 0: return [4 /*yield*/, db_1.pool.query('SELECT 1 FROM users WHERE email = $1', [email])];
             case 1:
-                existingUser = _a.sent();
-                if (existingUser.rows.length > 0) {
-                    throw new Error('Email sudah digunakan.');
-                }
+                existingUsers = (_a.sent()).rows;
+                if (existingUsers.length > 0)
+                    throw new Error('Email sudah terdaftar');
+                id = (0, uuid_1.v4)();
                 return [4 /*yield*/, bcryptjs_1.default.hash(password, 10)];
             case 2:
-                hashed = _a.sent();
-                return [4 /*yield*/, db_1.pool.query('INSERT INTO "User" (email, password) VALUES ($1, $2) RETURNING id, email', [email, hashed])];
+                hashedPassword = _a.sent();
+                code = generateVerificationCode();
+                return [4 /*yield*/, db_1.pool.query('INSERT INTO users (id, username, email, password, is_verified) VALUES ($1, $2, $3, $4, false)', [id, username, email, hashedPassword])];
             case 3:
-                newUser = _a.sent();
-                return [2 /*return*/, newUser.rows[0]]; // { id, email }
+                _a.sent();
+                return [4 /*yield*/, saveVerificationCode(email, code)];
+            case 4:
+                _a.sent();
+                return [4 /*yield*/, (0, mailer_1.sendEmail)(email, 'Kode Verifikasi', "Kode kamu: ".concat(code))];
+            case 5:
+                _a.sent();
+                return [2 /*return*/];
         }
     });
 }); };
 exports.registerUser = registerUser;
-var loginUser = function (email, password) { return __awaiter(void 0, void 0, void 0, function () {
-    var userResult, user, isValid, token;
+var verifyUserCode = function (email, code) { return __awaiter(void 0, void 0, Promise, function () {
+    var rows, record, expired;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, db_1.pool.query('SELECT * FROM "User" WHERE email = $1', [email])];
+            case 0: return [4 /*yield*/, db_1.pool.query('SELECT * FROM verification_codes WHERE email = $1', [email])];
             case 1:
-                userResult = _a.sent();
-                user = userResult.rows[0];
-                if (!user) {
-                    throw new Error('Email tidak ditemukan.');
-                }
-                return [4 /*yield*/, bcryptjs_1.default.compare(password, user.password)];
+                rows = (_a.sent()).rows;
+                if (!rows.length)
+                    throw new Error('Kode tidak ditemukan');
+                record = rows[0];
+                expired = new Date().getTime() - new Date(record.created_at).getTime() >
+                    10 * 60 * 1000;
+                if (record.code !== code)
+                    throw new Error('Kode salah');
+                if (expired)
+                    throw new Error('Kode verifikasi sudah kedaluwarsa');
+                return [4 /*yield*/, db_1.pool.query('UPDATE users SET is_verified = true WHERE email = $1', [email])];
             case 2:
-                isValid = _a.sent();
-                if (!isValid) {
-                    throw new Error('Password salah.');
-                }
-                token = (0, jwt_1.generateToken)({ id: user.id, email: user.email });
-                return [2 /*return*/, { token: token }];
+                _a.sent();
+                return [4 /*yield*/, db_1.pool.query('DELETE FROM verification_codes WHERE email = $1', [email])];
+            case 3:
+                _a.sent();
+                return [2 /*return*/];
         }
     });
 }); };
-exports.loginUser = loginUser;
+exports.verifyUserCode = verifyUserCode;
+var resendVerificationCode = function (email) { return __awaiter(void 0, void 0, Promise, function () {
+    var users, code;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, db_1.pool.query('SELECT is_verified FROM users WHERE email = $1', [email])];
+            case 1:
+                users = (_a.sent()).rows;
+                if (!users.length)
+                    throw new Error('Email belum terdaftar');
+                if (users[0].is_verified)
+                    throw new Error('Akun sudah diverifikasi');
+                code = generateVerificationCode();
+                return [4 /*yield*/, saveVerificationCode(email, code)];
+            case 2:
+                _a.sent();
+                return [4 /*yield*/, (0, mailer_1.sendEmail)(email, 'Kode Verifikasi Baru', "Kode verifikasi terbaru kamu: ".concat(code))];
+            case 3:
+                _a.sent();
+                return [2 /*return*/];
+        }
+    });
+}); };
+exports.resendVerificationCode = resendVerificationCode;
+var saveVerificationCode = function (email, code) { return __awaiter(void 0, void 0, Promise, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, db_1.pool.query("INSERT INTO verification_codes (id, email, code)\n     VALUES ($1, $2, $3)\n     ON CONFLICT (email)\n     DO UPDATE SET code = EXCLUDED.code, created_at = CURRENT_TIMESTAMP", [(0, uuid_1.v4)(), email, code])];
+            case 1:
+                _a.sent();
+                return [2 /*return*/];
+        }
+    });
+}); };
+var cleanUnverified = function () { return __awaiter(void 0, void 0, Promise, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, db_1.pool.query("\n    DELETE FROM users\n    WHERE is_verified = false AND created_at < NOW() - INTERVAL '24 hours'\n  ")];
+            case 1:
+                _a.sent();
+                return [2 /*return*/];
+        }
+    });
+}); };
+exports.cleanUnverified = cleanUnverified;

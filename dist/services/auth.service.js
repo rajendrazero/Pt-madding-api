@@ -3,37 +3,63 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.loginUser = exports.registerUser = void 0;
-const db_1 = require("../utils/db");
+exports.cleanUnverified = exports.resendVerificationCode = exports.verifyUserCode = exports.registerUser = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
-const jwt_1 = require("../utils/jwt");
-const registerUser = async (email, password) => {
-    // Cek apakah email sudah digunakan
-    const existingUser = await db_1.pool.query('SELECT * FROM "User" WHERE email = $1', [email]);
-    if (existingUser.rows.length > 0) {
-        throw new Error('Email sudah digunakan.');
-    }
-    // Enkripsi password
-    const hashed = await bcryptjs_1.default.hash(password, 10);
-    // Simpan user ke database
-    const newUser = await db_1.pool.query('INSERT INTO "User" (email, password) VALUES ($1, $2) RETURNING id, email', [email, hashed]);
-    return newUser.rows[0]; // { id, email }
+const uuid_1 = require("uuid");
+const mailer_1 = require("../utils/mailer");
+const db_1 = require("../utils/db");
+// Generate random 6-digit code
+const generateVerificationCode = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+};
+const registerUser = async (username, email, password) => {
+    const { rows: existingUsers } = await db_1.pool.query('SELECT 1 FROM users WHERE email = $1', [email]);
+    if (existingUsers.length > 0)
+        throw new Error('Email sudah terdaftar');
+    const id = (0, uuid_1.v4)();
+    const hashedPassword = await bcryptjs_1.default.hash(password, 10);
+    const code = generateVerificationCode();
+    await db_1.pool.query('INSERT INTO users (id, username, email, password, is_verified) VALUES ($1, $2, $3, $4, false)', [id, username, email, hashedPassword]);
+    await saveVerificationCode(email, code);
+    await (0, mailer_1.sendEmail)(email, 'Kode Verifikasi', `Kode kamu: ${code}`);
 };
 exports.registerUser = registerUser;
-const loginUser = async (email, password) => {
-    // Cek user berdasarkan email
-    const userResult = await db_1.pool.query('SELECT * FROM "User" WHERE email = $1', [email]);
-    const user = userResult.rows[0];
-    if (!user) {
-        throw new Error('Email tidak ditemukan.');
-    }
-    // Bandingkan password
-    const isValid = await bcryptjs_1.default.compare(password, user.password);
-    if (!isValid) {
-        throw new Error('Password salah.');
-    }
-    // Buat token
-    const token = (0, jwt_1.generateToken)({ id: user.id, email: user.email });
-    return { token };
+const verifyUserCode = async (email, code) => {
+    const { rows } = await db_1.pool.query('SELECT * FROM verification_codes WHERE email = $1', [email]);
+    if (!rows.length)
+        throw new Error('Kode tidak ditemukan');
+    const record = rows[0];
+    const expired = new Date().getTime() - new Date(record.created_at).getTime() >
+        10 * 60 * 1000;
+    if (record.code !== code)
+        throw new Error('Kode salah');
+    if (expired)
+        throw new Error('Kode verifikasi sudah kedaluwarsa');
+    await db_1.pool.query('UPDATE users SET is_verified = true WHERE email = $1', [email]);
+    await db_1.pool.query('DELETE FROM verification_codes WHERE email = $1', [email]);
 };
-exports.loginUser = loginUser;
+exports.verifyUserCode = verifyUserCode;
+const resendVerificationCode = async (email) => {
+    const { rows: users } = await db_1.pool.query('SELECT is_verified FROM users WHERE email = $1', [email]);
+    if (!users.length)
+        throw new Error('Email belum terdaftar');
+    if (users[0].is_verified)
+        throw new Error('Akun sudah diverifikasi');
+    const code = generateVerificationCode();
+    await saveVerificationCode(email, code);
+    await (0, mailer_1.sendEmail)(email, 'Kode Verifikasi Baru', `Kode verifikasi terbaru kamu: ${code}`);
+};
+exports.resendVerificationCode = resendVerificationCode;
+const saveVerificationCode = async (email, code) => {
+    await db_1.pool.query(`INSERT INTO verification_codes (id, email, code)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (email)
+     DO UPDATE SET code = EXCLUDED.code, created_at = CURRENT_TIMESTAMP`, [(0, uuid_1.v4)(), email, code]);
+};
+const cleanUnverified = async () => {
+    await db_1.pool.query(`
+    DELETE FROM users
+    WHERE is_verified = false AND created_at < NOW() - INTERVAL '24 hours'
+  `);
+};
+exports.cleanUnverified = cleanUnverified;

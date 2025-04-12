@@ -1,49 +1,68 @@
-import { pool } from '../utils/db';
 import bcrypt from 'bcryptjs';
-import { generateToken } from '../utils/jwt';
+import { v4 as uuidv4 } from 'uuid';
+import { sendEmail } from '../utils/mailer';
+import { pool } from '../utils/db';
 
-export const registerUser = async (email: string, password: string) => {
-  // Cek apakah email sudah digunakan
-  const existingUser = await pool.query(
-    'SELECT * FROM "User" WHERE email = $1',
-    [email]
-  );
-  if (existingUser.rows.length > 0) {
-    throw new Error('Email sudah digunakan.');
-  }
-
-  // Enkripsi password
-  const hashed = await bcrypt.hash(password, 10);
-
-  // Simpan user ke database
-  const newUser = await pool.query(
-    'INSERT INTO "User" (email, password) VALUES ($1, $2) RETURNING id, email',
-    [email, hashed]
-  );
-
-  return newUser.rows[0]; // { id, email }
+// Generate random 6-digit code
+const generateVerificationCode = (): string => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-export const loginUser = async (email: string, password: string) => {
-  // Cek user berdasarkan email
-  const userResult = await pool.query(
-    'SELECT * FROM "User" WHERE email = $1',
-    [email]
+export const registerUser = async (username: string, email: string, password: string): Promise<void> => {
+  const { rows: existingUsers } = await pool.query('SELECT 1 FROM users WHERE email = $1', [email]);
+  if (existingUsers.length > 0) throw new Error('Email sudah terdaftar');
+
+  const id = uuidv4();
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const code = generateVerificationCode();
+
+  await pool.query(
+    'INSERT INTO users (id, username, email, password, is_verified) VALUES ($1, $2, $3, $4, false)',
+    [id, username, email, hashedPassword]
   );
-  const user = userResult.rows[0];
 
-  if (!user) {
-    throw new Error('Email tidak ditemukan.');
-  }
+  await saveVerificationCode(email, code);
+  await sendEmail(email, 'Kode Verifikasi', `Kode kamu: ${code}`);
+};
 
-  // Bandingkan password
-  const isValid = await bcrypt.compare(password, user.password);
-  if (!isValid) {
-    throw new Error('Password salah.');
-  }
+export const verifyUserCode = async (email: string, code: string): Promise<void> => {
+  const { rows } = await pool.query('SELECT * FROM verification_codes WHERE email = $1', [email]);
+  if (!rows.length) throw new Error('Kode tidak ditemukan');
 
-  // Buat token
-  const token = generateToken({ id: user.id, email: user.email });
+  const record = rows[0];
+  const expired = new Date().getTime() - new Date(record.created_at).getTime() >
+  10 * 60 * 1000;
 
-  return { token };
+  if (record.code !== code) throw new Error('Kode salah');
+  if (expired) throw new Error('Kode verifikasi sudah kedaluwarsa');
+
+  await pool.query('UPDATE users SET is_verified = true WHERE email = $1', [email]);
+  await pool.query('DELETE FROM verification_codes WHERE email = $1', [email]);
+};
+
+export const resendVerificationCode = async (email: string): Promise<void> => {
+  const { rows: users } = await pool.query('SELECT is_verified FROM users WHERE email = $1', [email]);
+  if (!users.length) throw new Error('Email belum terdaftar');
+  if (users[0].is_verified) throw new Error('Akun sudah diverifikasi');
+
+  const code = generateVerificationCode();
+  await saveVerificationCode(email, code);
+  await sendEmail(email, 'Kode Verifikasi Baru', `Kode verifikasi terbaru kamu: ${code}`);
+};
+
+const saveVerificationCode = async (email: string, code: string): Promise<void> => {
+  await pool.query(
+    `INSERT INTO verification_codes (id, email, code)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (email)
+     DO UPDATE SET code = EXCLUDED.code, created_at = CURRENT_TIMESTAMP`,
+    [uuidv4(), email, code]
+  );
+};
+
+export const cleanUnverified = async (): Promise<void> => {
+  await pool.query(`
+    DELETE FROM users
+    WHERE is_verified = false AND created_at < NOW() - INTERVAL '24 hours'
+  `);
 };

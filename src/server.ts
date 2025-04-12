@@ -1,14 +1,12 @@
-// Import aplikasi Express yang kita buat di app.ts
-import app from './app';
-
-// Import variabel dari file .env
+import app from './app';  // Import aplikasi Express yang sudah dibuat
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Ambil PORT dari .env atau pakai default 3000
+// Import cron job agar dapat dijalankan saat server berjalan
+import './utils/cron';  // Pastikan path ke cron.ts sudah benar
+
 const PORT = process.env.PORT || 3000;
 
-// Jalankan server
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

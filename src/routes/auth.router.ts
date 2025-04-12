@@ -1,9 +1,15 @@
-import express from 'express';
-import { register, login } from '../controllers/auth.controller';
+import { Router } from 'express';
+import { register, verifyCode, resendCode } from '../controllers/auth.controller';
 
-const router = express.Router();
+const router = Router();
 
-router.post('/register', register);
-router.post('/login', login);
+// Route untuk registrasi dan pengiriman kode verifikasi
+router.post('/register', register);         // Simpan data sementara + kirim kode
+
+// Route untuk verifikasi kode
+router.post('/verify-code', verifyCode);    // Verifikasi kode dan simpan permanen
+
+// Route untuk mengirim ulang kode verifikasi
+router.post('/resend-code', resendCode);    // Kirim ulang kode verifikasi
 
 export default router;

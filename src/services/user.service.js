@@ -35,159 +35,119 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUsersWithFilterAndPagination = exports.softDeleteUserById = exports.updateUserById = exports.insertUser = exports.fetchAllUsers = exports.findUserById = void 0;
-var prismaClient_1 = require("../utils/prismaClient");
-var client_1 = require("@prisma/client");
-var findUserById = function (id) { return __awaiter(void 0, void 0, void 0, function () {
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0: return [4 /*yield*/, prismaClient_1.prisma.user.findUnique({ where: { id: id } })];
-            case 1: return [2 /*return*/, _a.sent()];
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
         }
-    });
-}); };
-exports.findUserById = findUserById;
-// Mengambil semua user yang tidak dihapus (isDeleted false)
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.deleteOldSoftDeletedUsers = exports.recoverUserById = exports.getUsersWithFilterAndPagination = exports.softDeleteUserById = exports.updateUserById = exports.fetchAllUsers = void 0;
+var db_1 = require("../utils/db");
+// Pool adalah koneksi ke PostgreSQL
 function fetchAllUsers() {
     return __awaiter(this, void 0, void 0, function () {
+        var res;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, prismaClient_1.prisma.user.findMany({
-                        where: { isDeleted: false },
-                        select: {
-                            id: true,
-                            username: true,
-                            email: true,
-                            role: true,
-                            isVerified: true,
-                            createdAt: true,
-                        },
-                        orderBy: { createdAt: 'desc' },
-                    })];
-                case 1: return [2 /*return*/, _a.sent()];
+                case 0: return [4 /*yield*/, db_1.pool.query("\n    SELECT id, username, email, role, is_verified, created_at\n    FROM users\n    WHERE is_deleted = false\n  ")];
+                case 1:
+                    res = _a.sent();
+                    return [2 /*return*/, res.rows];
             }
         });
     });
 }
 exports.fetchAllUsers = fetchAllUsers;
-// Menambahkan user baru ke database
-function insertUser(params) {
+function updateUserById(_a) {
+    var id = _a.id, username = _a.username, email = _a.email, password = _a.password;
     return __awaiter(this, void 0, void 0, function () {
-        var id, username, email, password, _a, role, _b, isVerified;
-        return __generator(this, function (_c) {
-            switch (_c.label) {
+        var fields, values, idx, query;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
                 case 0:
-                    id = params.id, username = params.username, email = params.email, password = params.password, _a = params.role, role = _a === void 0 ? client_1.Role.user : _a, _b = params.isVerified, isVerified = _b === void 0 ? false : _b;
-                    return [4 /*yield*/, prismaClient_1.prisma.user.create({
-                            data: {
-                                id: id,
-                                username: username,
-                                email: email,
-                                password: password,
-                                role: role,
-                                isVerified: isVerified,
-                            },
-                        })];
-                case 1: return [2 /*return*/, _c.sent()];
-            }
-        });
-    });
-}
-exports.insertUser = insertUser;
-// Memperbarui data user berdasarkan ID
-function updateUserById(params) {
-    return __awaiter(this, void 0, void 0, function () {
-        var id, username, email, password, role, isVerified, data;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    id = params.id, username = params.username, email = params.email, password = params.password, role = params.role, isVerified = params.isVerified;
-                    data = {};
-                    if (username)
-                        data.username = username;
-                    if (email)
-                        data.email = email;
-                    if (password)
-                        data.password = password;
-                    if (role)
-                        data.role = role;
-                    if (typeof isVerified === 'boolean')
-                        data.isVerified = isVerified;
-                    // Jika tidak ada field yang diupdate, lempar error atau kembalikan hasil
-                    if (Object.keys(data).length === 0) {
-                        throw new Error('Tidak ada data yang diperbarui.');
+                    fields = [];
+                    values = [];
+                    idx = 1;
+                    if (username) {
+                        fields.push("username = $".concat(idx++));
+                        values.push(username);
                     }
-                    return [4 /*yield*/, prismaClient_1.prisma.user.update({
-                            where: { id: id },
-                            data: data,
-                        })];
-                case 1: return [2 /*return*/, _a.sent()];
+                    if (email) {
+                        fields.push("email = $".concat(idx++));
+                        values.push(email);
+                    }
+                    if (password) {
+                        fields.push("password = $".concat(idx++));
+                        values.push(password);
+                    }
+                    if (fields.length === 0)
+                        return [2 /*return*/];
+                    values.push(id);
+                    query = "UPDATE users SET ".concat(fields.join(', '), " WHERE id = $").concat(idx);
+                    return [4 /*yield*/, db_1.pool.query(query, values)];
+                case 1:
+                    _b.sent();
+                    return [2 /*return*/];
             }
         });
     });
 }
 exports.updateUserById = updateUserById;
-// Melakukan soft delete pada user dengan merubah status isDeleted menjadi true
 function softDeleteUserById(id) {
     return __awaiter(this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, prismaClient_1.prisma.user.update({
-                        where: { id: id },
-                        data: { isDeleted: true },
-                    })];
-                case 1: return [2 /*return*/, _a.sent()];
+                case 0: return [4 /*yield*/, db_1.pool.query("UPDATE users SET is_deleted = true WHERE id = $1", [id])];
+                case 1:
+                    _a.sent();
+                    return [2 /*return*/];
             }
         });
     });
 }
 exports.softDeleteUserById = softDeleteUserById;
-// Mengambil user berdasarkan filter dan pagination
 function getUsersWithFilterAndPagination(_a) {
-    var keyword = _a.keyword, role = _a.role, isVerified = _a.isVerified, _b = _a.page, page = _b === void 0 ? 1 : _b, _c = _a.limit, limit = _c === void 0 ? 10 : _c;
+    var keyword = _a.keyword, role = _a.role, is_verified = _a.is_verified, _b = _a.page, page = _b === void 0 ? 1 : _b, _c = _a.limit, limit = _c === void 0 ? 10 : _c;
     return __awaiter(this, void 0, void 0, function () {
-        var filters, total, users;
+        var values, filters, idx, whereClause, offset, countQuery, countRes, total, dataQuery, dataRes;
         return __generator(this, function (_d) {
             switch (_d.label) {
                 case 0:
-                    filters = { isDeleted: false };
-                    // Jika ada keyword, cari berdasarkan username atau email (pencarian case-insensitive)
+                    values = [];
+                    filters = ['is_deleted = false'];
+                    idx = 1;
                     if (keyword) {
-                        filters.OR = [
-                            { username: { contains: keyword, mode: 'insensitive' } },
-                            { email: { contains: keyword, mode: 'insensitive' } },
-                        ];
+                        filters.push("(username ILIKE $".concat(idx, " OR email ILIKE $").concat(idx, ")"));
+                        values.push("%".concat(keyword, "%"));
+                        idx++;
                     }
-                    // Jika filter role ditentukan, tambahkan ke filter
                     if (role) {
-                        filters.role = role;
+                        filters.push("role = $".concat(idx));
+                        values.push(role);
+                        idx++;
                     }
-                    // Filter untuk status verifikasi
-                    if (typeof isVerified === 'boolean') {
-                        filters.isVerified = isVerified;
+                    if (typeof is_verified === 'boolean') {
+                        filters.push("is_verified = $".concat(idx));
+                        values.push(is_verified);
+                        idx++;
                     }
-                    return [4 /*yield*/, prismaClient_1.prisma.user.count({ where: filters })];
+                    whereClause = filters.length > 0 ? "WHERE ".concat(filters.join(' AND ')) : '';
+                    offset = (page - 1) * limit;
+                    countQuery = "SELECT COUNT(*) FROM users ".concat(whereClause);
+                    return [4 /*yield*/, db_1.pool.query(countQuery, values)];
                 case 1:
-                    total = _d.sent();
-                    return [4 /*yield*/, prismaClient_1.prisma.user.findMany({
-                            where: filters,
-                            select: {
-                                id: true,
-                                username: true,
-                                email: true,
-                                role: true,
-                                isVerified: true,
-                                createdAt: true,
-                            },
-                            orderBy: { createdAt: 'desc' },
-                            skip: (page - 1) * limit,
-                            take: limit,
-                        })];
+                    countRes = _d.sent();
+                    total = parseInt(countRes.rows[0].count, 10);
+                    dataQuery = "\n    SELECT id, username, email, role, is_verified, created_at\n    FROM users\n    ".concat(whereClause, "\n    ORDER BY created_at DESC\n    LIMIT $").concat(idx, " OFFSET $").concat(idx + 1, "\n  ");
+                    return [4 /*yield*/, db_1.pool.query(dataQuery, __spreadArray(__spreadArray([], values, true), [limit, offset], false))];
                 case 2:
-                    users = _d.sent();
+                    dataRes = _d.sent();
                     return [2 /*return*/, {
-                            data: users,
+                            data: dataRes.rows,
                             total: total,
                             currentPage: page,
                             totalPages: Math.ceil(total / limit),
@@ -197,3 +157,41 @@ function getUsersWithFilterAndPagination(_a) {
     });
 }
 exports.getUsersWithFilterAndPagination = getUsersWithFilterAndPagination;
+function recoverUserById(id) {
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, db_1.pool.query("UPDATE users SET is_deleted = false WHERE id = $1", [id])];
+                case 1:
+                    _a.sent();
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+exports.recoverUserById = recoverUserById;
+function deleteOldSoftDeletedUsers() {
+    return __awaiter(this, void 0, Promise, function () {
+        var result, error_1;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    console.log('Menghapus pengguna soft-deleted lebih dari 1 hari');
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, , 4]);
+                    return [4 /*yield*/, db_1.pool.query("\n      DELETE FROM users\n      WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '1 DAY'\n    ")];
+                case 2:
+                    result = _a.sent();
+                    console.log("".concat(result.rowCount, " pengguna dihapus"));
+                    return [3 /*break*/, 4];
+                case 3:
+                    error_1 = _a.sent();
+                    console.error('Error saat menghapus pengguna:', error_1);
+                    return [3 /*break*/, 4];
+                case 4: return [2 /*return*/];
+            }
+        });
+    });
+}
+exports.deleteOldSoftDeletedUsers = deleteOldSoftDeletedUsers;
