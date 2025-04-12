@@ -1,13 +1,19 @@
-import { pool } from '../utils/db';
-// Pool adalah koneksi ke PostgreSQL
+import { prisma } from '../utils/prismaClient';
 
 export async function fetchAllUsers() {
-  const res = await pool.query(`
-    SELECT id, username, email, role, is_verified, created_at
-    FROM users
-    WHERE is_deleted = false
-  `);
-  return res.rows;
+  return await prisma.user.findMany({
+    where: {
+      isDeleted: false
+    },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      role: true,
+      isVerified: true,
+      createdAt: true
+    }
+  });
 }
 
 export async function insertUser({
@@ -21,116 +27,102 @@ export async function insertUser({
   email: string;
   password: string;
 }) {
-  await pool.query(
-    `
-    INSERT INTO users (id, username, email, password)
-    VALUES ($1, $2, $3, $4)
-  `,
-    [id, username, email, password]
-  );
+  await prisma.user.create({
+    data: {
+      id,
+      username,
+      email,
+      password
+    }
+  });
 }
-
 
 export async function updateUserById({
   id,
   username,
   email,
-  password,
+  password
 }: {
   id: string;
   username?: string;
   email?: string;
   password?: string;
 }) {
-  const fields = [];
-  const values = [];
-  let idx = 1;
+  const data: any = {};
+  if (username) data.username = username;
+  if (email) data.email = email;
+  if (password) data.password = password;
 
-  if (username) {
-    fields.push(`username = $${idx++}`);
-    values.push(username);
-  }
-  if (email) {
-    fields.push(`email = $${idx++}`);
-    values.push(email);
-  }
-  if (password) {
-    fields.push(`password = $${idx++}`);
-    values.push(password);
-  }
+  if (Object.keys(data).length === 0) return;
 
-  if (fields.length === 0) return;
-
-  values.push(id);
-  const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx}`;
-  await pool.query(query, values);
+  await prisma.user.update({
+    where: { id },
+    data
+  });
 }
 
 export async function softDeleteUserById(id: string) {
-  await pool.query(
-    `UPDATE users SET is_deleted = true WHERE id = $1`,
-    [id]
-  );
+  await prisma.user.update({
+    where: { id },
+    data: { isDeleted: true }
+  });
 }
-
 
 export async function getUsersWithFilterAndPagination({
   keyword,
   role,
-  is_verified,
+  isVerified,
   page = 1,
   limit = 10
 }: {
   keyword?: string;
   role?: string;
-  is_verified?: boolean;
+  isVerified?: boolean;
   page?: number;
   limit?: number;
 }) {
-  const values: any[] = [];
-  const filters: string[] = ['is_deleted = false'];
-  let idx = 1;
+  const filters: any = {
+    isDeleted: false
+  };
 
   if (keyword) {
-    filters.push(`(username ILIKE $${idx} OR email ILIKE $${idx})`);
-    values.push(`%${keyword}%`);
-    idx++;
+    filters.OR = [
+      { username: { contains: keyword, mode: 'insensitive' } },
+      { email: { contains: keyword, mode: 'insensitive' } }
+    ];
   }
 
   if (role) {
-    filters.push(`role = $${idx}`);
-    values.push(role);
-    idx++;
+    filters.role = role;
   }
 
-  if (typeof is_verified === 'boolean') {
-    filters.push(`is_verified = $${idx}`);
-    values.push(is_verified);
-    idx++;
+  if (typeof isVerified === 'boolean') {
+    filters.isVerified = isVerified;
   }
 
-  const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
-  const offset = (page - 1) * limit;
+  const total = await prisma.user.count({ where: filters });
 
-  // Ambil total count
-  const countQuery = `SELECT COUNT(*) FROM users ${whereClause}`;
-  const countRes = await pool.query(countQuery, values);
-  const total = parseInt(countRes.rows[0].count, 10);
-
-  // Ambil data pengguna
-  const dataQuery = `
-    SELECT id, username, email, role, is_verified, created_at
-    FROM users
-    ${whereClause}
-    ORDER BY created_at DESC
-    LIMIT $${idx} OFFSET $${idx + 1}
-  `;
-  const dataRes = await pool.query(dataQuery, [...values, limit, offset]);
+  const users = await prisma.user.findMany({
+    where: filters,
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      role: true,
+      isVerified: true,
+      createdAt: true
+    },
+    orderBy: {
+      createdAt: 'desc'
+    },
+    skip: (page - 1) * limit,
+    take: limit
+  });
 
   return {
-    data: dataRes.rows,
+    data: users,
     total,
     currentPage: page,
-    totalPages: Math.ceil(total / limit),
+    totalPages: Math.ceil(total / limit)
   };
 }

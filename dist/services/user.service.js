@@ -5,85 +5,90 @@ exports.insertUser = insertUser;
 exports.updateUserById = updateUserById;
 exports.softDeleteUserById = softDeleteUserById;
 exports.getUsersWithFilterAndPagination = getUsersWithFilterAndPagination;
-const db_1 = require("../utils/db");
-// Pool adalah koneksi ke PostgreSQL
+const prismaClient_1 = require("../utils/prismaClient");
 async function fetchAllUsers() {
-    const res = await db_1.pool.query(`
-    SELECT id, username, email, role, is_verified, created_at
-    FROM users
-    WHERE is_deleted = false
-  `);
-    return res.rows;
+    return await prismaClient_1.prisma.user.findMany({
+        where: {
+            isDeleted: false
+        },
+        select: {
+            id: true,
+            username: true,
+            email: true,
+            role: true,
+            is_verified: true,
+            createdAt: true
+        }
+    });
 }
 async function insertUser({ id, username, email, password }) {
-    await db_1.pool.query(`
-    INSERT INTO users (id, username, email, password)
-    VALUES ($1, $2, $3, $4)
-  `, [id, username, email, password]);
+    await prismaClient_1.prisma.user.create({
+        data: {
+            id,
+            username,
+            email,
+            password
+        }
+    });
 }
-async function updateUserById({ id, username, email, password, }) {
-    const fields = [];
-    const values = [];
-    let idx = 1;
-    if (username) {
-        fields.push(`username = $${idx++}`);
-        values.push(username);
-    }
-    if (email) {
-        fields.push(`email = $${idx++}`);
-        values.push(email);
-    }
-    if (password) {
-        fields.push(`password = $${idx++}`);
-        values.push(password);
-    }
-    if (fields.length === 0)
+async function updateUserById({ id, username, email, password }) {
+    const data = {};
+    if (username)
+        data.username = username;
+    if (email)
+        data.email = email;
+    if (password)
+        data.password = password;
+    if (Object.keys(data).length === 0)
         return;
-    values.push(id);
-    const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx}`;
-    await db_1.pool.query(query, values);
+    await prismaClient_1.prisma.user.update({
+        where: { id },
+        data
+    });
 }
 async function softDeleteUserById(id) {
-    await db_1.pool.query(`UPDATE users SET is_deleted = true WHERE id = $1`, [id]);
+    await prismaClient_1.prisma.user.update({
+        where: { id },
+        data: { isDeleted: true }
+    });
 }
 async function getUsersWithFilterAndPagination({ keyword, role, is_verified, page = 1, limit = 10 }) {
-    const values = [];
-    const filters = ['is_deleted = false'];
-    let idx = 1;
+    const filters = {
+        isDeleted: false
+    };
     if (keyword) {
-        filters.push(`(username ILIKE $${idx} OR email ILIKE $${idx})`);
-        values.push(`%${keyword}%`);
-        idx++;
+        filters.OR = [
+            { username: { contains: keyword, mode: 'insensitive' } },
+            { email: { contains: keyword, mode: 'insensitive' } }
+        ];
     }
     if (role) {
-        filters.push(`role = $${idx}`);
-        values.push(role);
-        idx++;
+        filters.role = role;
     }
     if (typeof is_verified === 'boolean') {
-        filters.push(`is_verified = $${idx}`);
-        values.push(is_verified);
-        idx++;
+        filters.is_verified = is_verified;
     }
-    const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
-    const offset = (page - 1) * limit;
-    // Ambil total count
-    const countQuery = `SELECT COUNT(*) FROM users ${whereClause}`;
-    const countRes = await db_1.pool.query(countQuery, values);
-    const total = parseInt(countRes.rows[0].count, 10);
-    // Ambil data pengguna
-    const dataQuery = `
-    SELECT id, username, email, role, is_verified, created_at
-    FROM users
-    ${whereClause}
-    ORDER BY created_at DESC
-    LIMIT $${idx} OFFSET $${idx + 1}
-  `;
-    const dataRes = await db_1.pool.query(dataQuery, [...values, limit, offset]);
+    const total = await prismaClient_1.prisma.user.count({ where: filters });
+    const users = await prismaClient_1.prisma.user.findMany({
+        where: filters,
+        select: {
+            id: true,
+            username: true,
+            email: true,
+            role: true,
+            is_verified: true,
+            createdAt: true
+        },
+        orderBy: {
+            createdAt: 'desc'
+        },
+        skip: (page - 1) * limit,
+        take: limit
+    });
     return {
-        data: dataRes.rows,
+        data: users,
         total,
         currentPage: page,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limit)
     };
 }

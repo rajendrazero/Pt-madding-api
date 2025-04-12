@@ -35,28 +35,27 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
-    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
-        if (ar || !(i in from)) {
-            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
-            ar[i] = from[i];
-        }
-    }
-    return to.concat(ar || Array.prototype.slice.call(from));
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getUsersWithFilterAndPagination = exports.softDeleteUserById = exports.updateUserById = exports.insertUser = exports.fetchAllUsers = void 0;
-var db_1 = require("../utils/db");
-// Pool adalah koneksi ke PostgreSQL
+var prismaClient_1 = require("../utils/prismaClient");
 function fetchAllUsers() {
     return __awaiter(this, void 0, void 0, function () {
-        var res;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, db_1.pool.query("\n    SELECT id, username, email, role, is_verified, created_at\n    FROM users\n    WHERE is_deleted = false\n  ")];
-                case 1:
-                    res = _a.sent();
-                    return [2 /*return*/, res.rows];
+                case 0: return [4 /*yield*/, prismaClient_1.prisma.user.findMany({
+                        where: {
+                            isDeleted: false
+                        },
+                        select: {
+                            id: true,
+                            username: true,
+                            email: true,
+                            role: true,
+                            isVerified: true,
+                            createdAt: true
+                        }
+                    })];
+                case 1: return [2 /*return*/, _a.sent()];
             }
         });
     });
@@ -67,7 +66,14 @@ function insertUser(_a) {
     return __awaiter(this, void 0, void 0, function () {
         return __generator(this, function (_b) {
             switch (_b.label) {
-                case 0: return [4 /*yield*/, db_1.pool.query("\n    INSERT INTO users (id, username, email, password)\n    VALUES ($1, $2, $3, $4)\n  ", [id, username, email, password])];
+                case 0: return [4 /*yield*/, prismaClient_1.prisma.user.create({
+                        data: {
+                            id: id,
+                            username: username,
+                            email: email,
+                            password: password
+                        }
+                    })];
                 case 1:
                     _b.sent();
                     return [2 /*return*/];
@@ -79,30 +85,23 @@ exports.insertUser = insertUser;
 function updateUserById(_a) {
     var id = _a.id, username = _a.username, email = _a.email, password = _a.password;
     return __awaiter(this, void 0, void 0, function () {
-        var fields, values, idx, query;
+        var data;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
-                    fields = [];
-                    values = [];
-                    idx = 1;
-                    if (username) {
-                        fields.push("username = $".concat(idx++));
-                        values.push(username);
-                    }
-                    if (email) {
-                        fields.push("email = $".concat(idx++));
-                        values.push(email);
-                    }
-                    if (password) {
-                        fields.push("password = $".concat(idx++));
-                        values.push(password);
-                    }
-                    if (fields.length === 0)
+                    data = {};
+                    if (username)
+                        data.username = username;
+                    if (email)
+                        data.email = email;
+                    if (password)
+                        data.password = password;
+                    if (Object.keys(data).length === 0)
                         return [2 /*return*/];
-                    values.push(id);
-                    query = "UPDATE users SET ".concat(fields.join(', '), " WHERE id = $").concat(idx);
-                    return [4 /*yield*/, db_1.pool.query(query, values)];
+                    return [4 /*yield*/, prismaClient_1.prisma.user.update({
+                            where: { id: id },
+                            data: data
+                        })];
                 case 1:
                     _b.sent();
                     return [2 /*return*/];
@@ -115,7 +114,10 @@ function softDeleteUserById(id) {
     return __awaiter(this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, db_1.pool.query("UPDATE users SET is_deleted = true WHERE id = $1", [id])];
+                case 0: return [4 /*yield*/, prismaClient_1.prisma.user.update({
+                        where: { id: id },
+                        data: { isDeleted: true }
+                    })];
                 case 1:
                     _a.sent();
                     return [2 /*return*/];
@@ -125,46 +127,53 @@ function softDeleteUserById(id) {
 }
 exports.softDeleteUserById = softDeleteUserById;
 function getUsersWithFilterAndPagination(_a) {
-    var keyword = _a.keyword, role = _a.role, is_verified = _a.is_verified, _b = _a.page, page = _b === void 0 ? 1 : _b, _c = _a.limit, limit = _c === void 0 ? 10 : _c;
+    var keyword = _a.keyword, role = _a.role, isVerified = _a.isVerified, _b = _a.page, page = _b === void 0 ? 1 : _b, _c = _a.limit, limit = _c === void 0 ? 10 : _c;
     return __awaiter(this, void 0, void 0, function () {
-        var values, filters, idx, whereClause, offset, countQuery, countRes, total, dataQuery, dataRes;
+        var filters, total, users;
         return __generator(this, function (_d) {
             switch (_d.label) {
                 case 0:
-                    values = [];
-                    filters = ['is_deleted = false'];
-                    idx = 1;
+                    filters = {
+                        isDeleted: false
+                    };
                     if (keyword) {
-                        filters.push("(username ILIKE $".concat(idx, " OR email ILIKE $").concat(idx, ")"));
-                        values.push("%".concat(keyword, "%"));
-                        idx++;
+                        filters.OR = [
+                            { username: { contains: keyword, mode: 'insensitive' } },
+                            { email: { contains: keyword, mode: 'insensitive' } }
+                        ];
                     }
                     if (role) {
-                        filters.push("role = $".concat(idx));
-                        values.push(role);
-                        idx++;
+                        filters.role = role;
                     }
-                    if (typeof is_verified === 'boolean') {
-                        filters.push("is_verified = $".concat(idx));
-                        values.push(is_verified);
-                        idx++;
+                    if (typeof isVerified === 'boolean') {
+                        filters.isVerified = isVerified;
                     }
-                    whereClause = filters.length > 0 ? "WHERE ".concat(filters.join(' AND ')) : '';
-                    offset = (page - 1) * limit;
-                    countQuery = "SELECT COUNT(*) FROM users ".concat(whereClause);
-                    return [4 /*yield*/, db_1.pool.query(countQuery, values)];
+                    return [4 /*yield*/, prismaClient_1.prisma.user.count({ where: filters })];
                 case 1:
-                    countRes = _d.sent();
-                    total = parseInt(countRes.rows[0].count, 10);
-                    dataQuery = "\n    SELECT id, username, email, role, is_verified, created_at\n    FROM users\n    ".concat(whereClause, "\n    ORDER BY created_at DESC\n    LIMIT $").concat(idx, " OFFSET $").concat(idx + 1, "\n  ");
-                    return [4 /*yield*/, db_1.pool.query(dataQuery, __spreadArray(__spreadArray([], values, true), [limit, offset], false))];
+                    total = _d.sent();
+                    return [4 /*yield*/, prismaClient_1.prisma.user.findMany({
+                            where: filters,
+                            select: {
+                                id: true,
+                                username: true,
+                                email: true,
+                                role: true,
+                                isVerified: true,
+                                createdAt: true
+                            },
+                            orderBy: {
+                                createdAt: 'desc'
+                            },
+                            skip: (page - 1) * limit,
+                            take: limit
+                        })];
                 case 2:
-                    dataRes = _d.sent();
+                    users = _d.sent();
                     return [2 /*return*/, {
-                            data: dataRes.rows,
+                            data: users,
                             total: total,
                             currentPage: page,
-                            totalPages: Math.ceil(total / limit),
+                            totalPages: Math.ceil(total / limit)
                         }];
             }
         });

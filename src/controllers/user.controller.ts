@@ -1,101 +1,76 @@
-import { Request, Response, RequestHandler } from 'express';
-import { 
-fetchAllUsers, 
-insertUser,
-updateUserById, 
-softDeleteUserById,
-getUsersWithFilterAndPagination,
+import { Request, Response } from 'express';
+import {
+  fetchAllUsers,
+  insertUser,
+  updateUserById,
+  softDeleteUserById,
+  getUsersWithFilterAndPagination
 } from '../services/user.service';
 import { v4 as uuidv4 } from 'uuid';
-import { createUserSchema, updateUserSchema } from
-'../validations/user.validation';
-import { z } from 'zod';
 
-/**
- * Handler untuk mengambil semua user dari database
- */
-export const getAllUsers: RequestHandler = async (req, res) => {
+export const getAllUsers = async (req: Request, res: Response) => {
   try {
-    const users = await fetchAllUsers(); // Ambil semua user dari service
-    res.status(200).json(users);         // Kirim response 200 OK dengan data user
-  } catch (error) {
-    console.error('Gagal mengambil user:', error); // Logging jika error
-    res.status(500).json({ error: 'Internal Server Error' }); // Kirim response 500
+    const users = await fetchAllUsers();
+    res.status(200).json({ success: true, data: users });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Gagal mengambil data pengguna.', error: err });
   }
 };
 
-/**
- * Handler untuk membuat user baru
- */
-export const createUser: RequestHandler = async (req, res) => {
+export const createUser = async (req: Request, res: Response) => {
   try {
-    const parsed = createUserSchema.parse(req.body); // Validasi pakai Zod
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Semua field wajib diisi.' });
+    }
+
     const id = uuidv4();
-    await insertUser({ id, ...parsed });
+    await insertUser({ id, username, email, password });
 
-    res.status(201).json({ message: 'User berhasil ditambahkan', id });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-       res.status(400).json({ error: error.errors.map(e => e.message) });
-    }
-    console.error('Gagal menambahkan user:', error);
-    res.status(500).json({ error: 'Gagal menambahkan user' });
+    res.status(201).json({ success: true, message: 'Pengguna berhasil ditambahkan.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Gagal menambahkan pengguna.', error: err });
   }
 };
 
-
-export const updateUser = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
-
+export const updateUser = async (req: Request, res: Response) => {
   try {
-    const parsed = updateUserSchema.parse(req.body); // Validasi update
-    await updateUserById({ id, ...parsed });
-    res.status(200).json({ message: 'User berhasil diupdate' });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: error.errors.map(e => e.message) });
-      return;
-    }
-    console.error('Gagal update user:', error);
-    res.status(500).json({ error: 'Gagal update user' });
+    const { id } = req.params;
+    const { username, email, password } = req.body;
+
+    await updateUserById({ id, username, email, password });
+    res.status(200).json({ success: true, message: 'Pengguna berhasil diperbarui.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Gagal memperbarui pengguna.', error: err });
   }
 };
 
-
-export const deleteUser: RequestHandler = async (req, res) => {
-  const { id } = req.params;
-
+export const deleteUser = async (req: Request, res: Response) => {
   try {
+    const { id } = req.params;
     await softDeleteUserById(id);
-    res.status(200).json({ message: 'User berhasil dihapus (soft delete)' });
-  } catch (error) {
-    console.error('Gagal hapus user:', error);
-    res.status(500).json({ error: 'Gagal hapus user' });
+
+    res.status(200).json({ success: true, message: 'Pengguna berhasil dihapus (soft delete).' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Gagal menghapus pengguna.', error: err });
   }
 };
 
-
-export const getUsersPaginated: RequestHandler = async (req, res) => {
+export const getUsersWithFilters = async (req: Request, res: Response) => {
   try {
-    const {
-      keyword,
-      role,
-      is_verified,
-      page = '1',
-      limit = '10'
-    } = req.query;
+    const { keyword, role, is_verified, page, limit } = req.query;
 
-    const data = await getUsersWithFilterAndPagination({
-      keyword: keyword?.toString(),
-      role: role?.toString(),
+    const users = await getUsersWithFilterAndPagination({
+      keyword: keyword as string,
+      role: role as string,
       is_verified: is_verified === 'true' ? true : is_verified === 'false' ? false : undefined,
-      page: parseInt(page as string),
-      limit: parseInt(limit as string)
+      page: page ? parseInt(page as string) : 1,
+      limit: limit ? parseInt(limit as string) : 10
     });
 
-    res.status(200).json(data);
-  } catch (error) {
-    console.error('Gagal filter + pagination:', error);
-    res.status(500).json({ error: 'Terjadi kesalahan saat filter data user' });
+    res.status(200).json({ success: true, ...users });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Gagal mengambil data pengguna dengan filter.', error: err });
   }
 };
