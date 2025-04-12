@@ -36,22 +36,27 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createRating = void 0;
-var ratingService = require("../services/rating.service");
-var createRating = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a, itemId, rating, userId, result;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
+exports.getAllUsers = void 0;
+var db_1 = require("../utils/db");
+// Ambil semua user dari tabel "User"
+var getAllUsers = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var result, error_1;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
             case 0:
-                _a = req.body, itemId = _a.itemId, rating = _a.rating;
-                userId = req.body.user.id // dari middleware auth
-                ;
-                return [4 /*yield*/, ratingService.createRating(userId, itemId, rating)];
+                _a.trys.push([0, 2, , 3]);
+                return [4 /*yield*/, db_1.pool.query('SELECT id, email, createdAt FROM "User" WHERE "isDeleted" = false')];
             case 1:
-                result = _b.sent();
-                res.json(result);
-                return [2 /*return*/];
+                result = _a.sent();
+                res.json(result.rows);
+                return [3 /*break*/, 3];
+            case 2:
+                error_1 = _a.sent();
+                console.error('Gagal mengambil user:', error_1);
+                res.status(500).json({ error: 'Internal Server Error' });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
         }
     });
 }); };
-exports.createRating = createRating;
+exports.getAllUsers = getAllUsers;

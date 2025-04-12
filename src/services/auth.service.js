@@ -36,30 +36,51 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createRating = void 0;
-var prismaClient_1 = require("../utils/prismaClient");
-var createRating = function (userId, itemId, rating) { return __awaiter(void 0, void 0, void 0, function () {
-    var existing;
+exports.loginUser = exports.registerUser = void 0;
+var db_1 = require("../utils/db");
+var bcryptjs_1 = require("bcryptjs");
+var jwt_1 = require("../utils/jwt");
+var registerUser = function (email, password) { return __awaiter(void 0, void 0, void 0, function () {
+    var existingUser, hashed, newUser;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, prismaClient_1.prisma.rating.findUnique({ where: { userId_itemId: { userId: userId, itemId: itemId } } })];
+            case 0: return [4 /*yield*/, db_1.pool.query('SELECT * FROM "User" WHERE email = $1', [email])];
             case 1:
-                existing = _a.sent();
-                if (!existing) return [3 /*break*/, 3];
-                return [4 /*yield*/, prismaClient_1.prisma.rating.update({
-                        where: { userId_itemId: { userId: userId, itemId: itemId } },
-                        data: { rating: rating }
-                    })];
-            case 2: return [2 /*return*/, _a.sent()];
-            case 3: return [4 /*yield*/, prismaClient_1.prisma.rating.create({
-                    data: {
-                        userId: userId,
-                        itemId: itemId,
-                        rating: rating
-                    }
-                })];
-            case 4: return [2 /*return*/, _a.sent()];
+                existingUser = _a.sent();
+                if (existingUser.rows.length > 0) {
+                    throw new Error('Email sudah digunakan.');
+                }
+                return [4 /*yield*/, bcryptjs_1.default.hash(password, 10)];
+            case 2:
+                hashed = _a.sent();
+                return [4 /*yield*/, db_1.pool.query('INSERT INTO "User" (email, password) VALUES ($1, $2) RETURNING id, email', [email, hashed])];
+            case 3:
+                newUser = _a.sent();
+                return [2 /*return*/, newUser.rows[0]]; // { id, email }
         }
     });
 }); };
-exports.createRating = createRating;
+exports.registerUser = registerUser;
+var loginUser = function (email, password) { return __awaiter(void 0, void 0, void 0, function () {
+    var userResult, user, isValid, token;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, db_1.pool.query('SELECT * FROM "User" WHERE email = $1', [email])];
+            case 1:
+                userResult = _a.sent();
+                user = userResult.rows[0];
+                if (!user) {
+                    throw new Error('Email tidak ditemukan.');
+                }
+                return [4 /*yield*/, bcryptjs_1.default.compare(password, user.password)];
+            case 2:
+                isValid = _a.sent();
+                if (!isValid) {
+                    throw new Error('Password salah.');
+                }
+                token = (0, jwt_1.generateToken)({ id: user.id, email: user.email });
+                return [2 /*return*/, { token: token }];
+        }
+    });
+}); };
+exports.loginUser = loginUser;

@@ -1,13 +1,14 @@
-import express from 'express'
-import itemRoutes from './routes/item.route'
-import ratingRoutes from './routes/rating.route'
-import commentRoutes from './routes/comment.route'
+import express from 'express';
+import dotenv from 'dotenv';
+import userRoutes from './routes/user.router';
+import authRoutes from './routes/auth.router';
 
-const app = express()
-app.use(express.json())
+dotenv.config();
+const app = express();
 
-app.use('/api/items', itemRoutes)
-app.use('/api/ratings', ratingRoutes)
-app.use('/api/comments', commentRoutes)
+app.use(express.json());
 
-export default app
+app.use('/api/users', userRoutes);
+app.use('/api/auth', authRoutes);
+
+export default app;
