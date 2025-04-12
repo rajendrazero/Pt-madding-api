@@ -1,12 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var express_1 = require("express");
-var dotenv_1 = require("dotenv");
-var user_router_1 = require("./routes/user.router");
 var auth_router_1 = require("./routes/auth.router");
-dotenv_1.default.config();
+var user_router_1 = require("./routes/user.router");
 var app = (0, express_1.default)();
 app.use(express_1.default.json());
-app.use('/api/users', user_router_1.default);
+// Tambahkan endpoint dasar untuk tes
+app.get('/', function (req, res) {
+    res.send('Server berjalan!');
+});
 app.use('/api/auth', auth_router_1.default);
+app.use('/api/users', user_router_1.default);
 exports.default = app;

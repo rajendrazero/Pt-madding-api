@@ -36,27 +36,63 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllUsers = void 0;
-var db_1 = require("../utils/db");
-// Ambil semua user dari tabel "User"
+exports.createUser = exports.getAllUsers = void 0;
+var user_service_1 = require("../services/user.service");
+var uuid_1 = require("uuid");
+/**
+ * Handler untuk mengambil semua user dari database
+ */
 var getAllUsers = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var result, error_1;
+    var users, error_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 _a.trys.push([0, 2, , 3]);
-                return [4 /*yield*/, db_1.pool.query('SELECT id, email, createdAt FROM "User" WHERE "isDeleted" = false')];
+                return [4 /*yield*/, (0, user_service_1.fetchAllUsers)()];
             case 1:
-                result = _a.sent();
-                res.json(result.rows);
+                users = _a.sent();
+                res.status(200).json(users); // Kirim response 200 OK dengan data user
                 return [3 /*break*/, 3];
             case 2:
                 error_1 = _a.sent();
-                console.error('Gagal mengambil user:', error_1);
-                res.status(500).json({ error: 'Internal Server Error' });
+                console.error('Gagal mengambil user:', error_1); // Logging jika error
+                res.status(500).json({ error: 'Internal Server Error' }); // Kirim response 500
                 return [3 /*break*/, 3];
             case 3: return [2 /*return*/];
         }
     });
 }); };
 exports.getAllUsers = getAllUsers;
+/**
+ * Handler untuk membuat user baru
+ */
+var createUser = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var _a, username, email, password, id, error_2;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _a = req.body, username = _a.username, email = _a.email, password = _a.password;
+                // Validasi data
+                if (!username || !email || !password) {
+                    res.status(400).json({ error: 'Field tidak lengkap!' }); // Kirim response 400 Bad Request
+                    return [2 /*return*/]; // Hentikan eksekusi
+                }
+                _b.label = 1;
+            case 1:
+                _b.trys.push([1, 3, , 4]);
+                id = (0, uuid_1.v4)();
+                return [4 /*yield*/, (0, user_service_1.insertUser)({ id: id, username: username, email: email, password: password })];
+            case 2:
+                _b.sent(); // Simpan ke DB lewat service
+                res.status(201).json({ message: 'User berhasil ditambahkan', id: id }); // Kirim response sukses
+                return [3 /*break*/, 4];
+            case 3:
+                error_2 = _b.sent();
+                console.error('Gagal menambahkan user:', error_2); // Logging jika gagal
+                res.status(500).json({ error: 'Gagal menambahkan user' }); // Kirim response 500
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); };
+exports.createUser = createUser;

@@ -36,14 +36,15 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllUsers = void 0;
+exports.insertUser = exports.fetchAllUsers = void 0;
 var db_1 = require("../utils/db");
-function getAllUsers() {
+// Pool adalah koneksi ke PostgreSQL
+function fetchAllUsers() {
     return __awaiter(this, void 0, void 0, function () {
         var res;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, db_1.pool.query('SELECT * FROM "User" WHERE "isDeleted" = false')];
+                case 0: return [4 /*yield*/, db_1.pool.query("\n    SELECT id, username, email, role, is_verified, created_at\n    FROM users\n    WHERE is_deleted = false\n  ")];
                 case 1:
                     res = _a.sent();
                     return [2 /*return*/, res.rows];
@@ -51,4 +52,18 @@ function getAllUsers() {
         });
     });
 }
-exports.getAllUsers = getAllUsers;
+exports.fetchAllUsers = fetchAllUsers;
+function insertUser(_a) {
+    var id = _a.id, username = _a.username, email = _a.email, password = _a.password;
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_b) {
+            switch (_b.label) {
+                case 0: return [4 /*yield*/, db_1.pool.query("\n    INSERT INTO users (id, username, email, password)\n    VALUES ($1, $2, $3, $4)\n  ", [id, username, email, password])];
+                case 1:
+                    _b.sent();
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+exports.insertUser = insertUser;
