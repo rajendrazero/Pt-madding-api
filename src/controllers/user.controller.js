@@ -48,8 +48,10 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getUsersWithFilters = exports.deleteUser = exports.updateUser = exports.createUser = exports.getAllUsers = void 0;
+var user_validation_1 = require("../validations/user.validation");
 var user_service_1 = require("../services/user.service");
 var uuid_1 = require("uuid");
+var bcrypt_1 = require("bcrypt");
 var getAllUsers = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
     var users, err_1;
     return __generator(this, function (_a) {
@@ -71,84 +73,117 @@ var getAllUsers = function (req, res) { return __awaiter(void 0, void 0, void 0,
 }); };
 exports.getAllUsers = getAllUsers;
 var createUser = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a, username, email, password, id, err_2;
+    var parsed, _a, username, email, password, id, hashedPassword, err_2;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
-                _b.trys.push([0, 2, , 3]);
-                _a = req.body, username = _a.username, email = _a.email, password = _a.password;
-                if (!username || !email || !password) {
-                    return [2 /*return*/, res.status(400).json({ success: false, message: 'Semua field wajib diisi.' })];
+                _b.trys.push([0, 3, , 4]);
+                parsed = user_validation_1.createUserSchema.safeParse(req.body);
+                if (!parsed.success) {
+                    return [2 /*return*/, res.status(400).json({ success: false, errors: parsed.error.flatten().fieldErrors })];
                 }
+                _a = parsed.data, username = _a.username, email = _a.email, password = _a.password;
                 id = (0, uuid_1.v4)();
-                return [4 /*yield*/, (0, user_service_1.insertUser)({ id: id, username: username, email: email, password: password })];
+                return [4 /*yield*/, bcrypt_1.default.hash(password, 10)];
             case 1:
+                hashedPassword = _b.sent();
+                return [4 /*yield*/, (0, user_service_1.insertUser)({ id: id, username: username, email: email, password: hashedPassword })];
+            case 2:
                 _b.sent();
                 res.status(201).json({ success: true, message: 'Pengguna berhasil ditambahkan.' });
-                return [3 /*break*/, 3];
-            case 2:
+                return [3 /*break*/, 4];
+            case 3:
                 err_2 = _b.sent();
                 res.status(500).json({ success: false, message: 'Gagal menambahkan pengguna.', error: err_2 });
-                return [3 /*break*/, 3];
-            case 3: return [2 /*return*/];
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
         }
     });
 }); };
 exports.createUser = createUser;
 var updateUser = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var id, _a, username, email, password, err_3;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
+    var id, existingUser, parsed, _a, username, email, password, hashedPassword, _b, updated, err_3;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
             case 0:
-                _b.trys.push([0, 2, , 3]);
-                id = req.params.id;
-                _a = req.body, username = _a.username, email = _a.email, password = _a.password;
-                return [4 /*yield*/, (0, user_service_1.updateUserById)({ id: id, username: username, email: email, password: password })];
+                _c.trys.push([0, 6, , 7]);
+                id = parseInt(req.params.id);
+                if (isNaN(id)) {
+                    return [2 /*return*/, res.status(400).json({ success: false, message: 'ID tidak valid.' })];
+                }
+                return [4 /*yield*/, (0, user_service_1.findUserById)(id)];
             case 1:
-                _b.sent();
-                res.status(200).json({ success: true, message: 'Pengguna berhasil diperbarui.' });
-                return [3 /*break*/, 3];
+                existingUser = _c.sent();
+                if (!existingUser || existingUser.isDeleted) {
+                    return [2 /*return*/, res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan atau sudah dihapus.' })];
+                }
+                parsed = user_validation_1.updateUserSchema.safeParse(req.body);
+                if (!parsed.success) {
+                    return [2 /*return*/, res.status(400).json({ success: false, errors: parsed.error.flatten().fieldErrors })];
+                }
+                _a = parsed.data, username = _a.username, email = _a.email, password = _a.password;
+                if (!password) return [3 /*break*/, 3];
+                return [4 /*yield*/, bcrypt_1.default.hash(password, 10)];
             case 2:
-                err_3 = _b.sent();
+                _b = _c.sent();
+                return [3 /*break*/, 4];
+            case 3:
+                _b = undefined;
+                _c.label = 4;
+            case 4:
+                hashedPassword = _b;
+                return [4 /*yield*/, (0, user_service_1.updateUserById)(id, __assign({ username: username, email: email }, (hashedPassword && { password: hashedPassword })))];
+            case 5:
+                updated = _c.sent();
+                res.status(200).json({ success: true, message: 'Pengguna berhasil diperbarui.', data: updated });
+                return [3 /*break*/, 7];
+            case 6:
+                err_3 = _c.sent();
                 res.status(500).json({ success: false, message: 'Gagal memperbarui pengguna.', error: err_3 });
-                return [3 /*break*/, 3];
-            case 3: return [2 /*return*/];
+                return [3 /*break*/, 7];
+            case 7: return [2 /*return*/];
         }
     });
 }); };
 exports.updateUser = updateUser;
 var deleteUser = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var id, err_4;
+    var id, existingUser, err_4;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                _a.trys.push([0, 2, , 3]);
+                _a.trys.push([0, 3, , 4]);
                 id = req.params.id;
-                return [4 /*yield*/, (0, user_service_1.softDeleteUserById)(id)];
+                return [4 /*yield*/, (0, user_service_1.findUserById)(id)];
             case 1:
+                existingUser = _a.sent();
+                if (!existingUser || existingUser.isDeleted) {
+                    return [2 /*return*/, res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan atau sudah dihapus.' })];
+                }
+                return [4 /*yield*/, (0, user_service_1.softDeleteUserById)(id)];
+            case 2:
                 _a.sent();
                 res.status(200).json({ success: true, message: 'Pengguna berhasil dihapus (soft delete).' });
-                return [3 /*break*/, 3];
-            case 2:
+                return [3 /*break*/, 4];
+            case 3:
                 err_4 = _a.sent();
                 res.status(500).json({ success: false, message: 'Gagal menghapus pengguna.', error: err_4 });
-                return [3 /*break*/, 3];
-            case 3: return [2 /*return*/];
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
         }
     });
 }); };
 exports.deleteUser = deleteUser;
 var getUsersWithFilters = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a, keyword, role, is_verified, page, limit, users, err_5;
+    var _a, keyword, role, isVerified, page, limit, users, err_5;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
                 _b.trys.push([0, 2, , 3]);
-                _a = req.query, keyword = _a.keyword, role = _a.role, is_verified = _a.is_verified, page = _a.page, limit = _a.limit;
+                _a = req.query, keyword = _a.keyword, role = _a.role, isVerified = _a.isVerified, page = _a.page, limit = _a.limit;
                 return [4 /*yield*/, (0, user_service_1.getUsersWithFilterAndPagination)({
                         keyword: keyword,
                         role: role,
-                        is_verified: is_verified === 'true' ? true : is_verified === 'false' ? false : undefined,
+                        isVerified: isVerified === 'true' ? true : isVerified === 'false' ? false : undefined,
                         page: page ? parseInt(page) : 1,
                         limit: limit ? parseInt(limit) : 10
                     })];

@@ -1,12 +1,16 @@
 import { Request, Response } from 'express';
+import { createUserSchema, updateUserSchema } from '../validations/user.validation';
 import {
   fetchAllUsers,
   insertUser,
   updateUserById,
   softDeleteUserById,
-  getUsersWithFilterAndPagination
+  getUsersWithFilterAndPagination,
+  findUserById
 } from '../services/user.service';
 import { v4 as uuidv4 } from 'uuid';
+import { z } from 'zod';
+import bcrypt from 'bcrypt';
 
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
@@ -19,14 +23,16 @@ export const getAllUsers = async (req: Request, res: Response) => {
 
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { username, email, password } = req.body;
-
-    if (!username || !email || !password) {
-      return res.status(400).json({ success: false, message: 'Semua field wajib diisi.' });
+    const parsed = createUserSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ success: false, errors: parsed.error.flatten().fieldErrors });
     }
 
+    const { username, email, password } = parsed.data;
     const id = uuidv4();
-    await insertUser({ id, username, email, password });
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await insertUser({ id, username, email, password: hashedPassword });
 
     res.status(201).json({ success: true, message: 'Pengguna berhasil ditambahkan.' });
   } catch (err) {
@@ -34,37 +40,71 @@ export const createUser = async (req: Request, res: Response) => {
   }
 };
 
+
 export const updateUser = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const { username, email, password } = req.body;
+    // Convert id dari string ke number
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ success: false, message: 'ID tidak valid.' });
+    }
 
-    await updateUserById({ id, username, email, password });
-    res.status(200).json({ success: true, message: 'Pengguna berhasil diperbarui.' });
+    // Cek apakah user ada dan belum dihapus
+    const existingUser = await findUserById(id);
+    if (!existingUser || existingUser.isDeleted) {
+      return res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan atau sudah dihapus.' });
+    }
+
+    // Validasi data request body
+    const parsed = updateUserSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ success: false, errors: parsed.error.flatten().fieldErrors });
+    }
+
+    const { username, email, password } = parsed.data;
+
+    // Hash password jika ada
+    const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
+
+    // Update data user
+    const updated = await updateUserById(id, {
+      username,
+      email,
+      ...(hashedPassword && { password: hashedPassword }),
+    });
+
+    res.status(200).json({ success: true, message: 'Pengguna berhasil diperbarui.', data: updated });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Gagal memperbarui pengguna.', error: err });
   }
 };
 
+
 export const deleteUser = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    await softDeleteUserById(id);
 
+    const existingUser = await findUserById(id);
+    if (!existingUser || existingUser.isDeleted) {
+      return res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan atau sudah dihapus.' });
+    }
+
+    await softDeleteUserById(id);
     res.status(200).json({ success: true, message: 'Pengguna berhasil dihapus (soft delete).' });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Gagal menghapus pengguna.', error: err });
   }
 };
 
+
 export const getUsersWithFilters = async (req: Request, res: Response) => {
   try {
-    const { keyword, role, is_verified, page, limit } = req.query;
+    const { keyword, role, isVerified, page, limit } = req.query;
 
     const users = await getUsersWithFilterAndPagination({
       keyword: keyword as string,
       role: role as string,
-      is_verified: is_verified === 'true' ? true : is_verified === 'false' ? false : undefined,
+      isVerified: isVerified === 'true' ? true : isVerified === 'false' ? false : undefined,
       page: page ? parseInt(page as string) : 1,
       limit: limit ? parseInt(limit as string) : 10
     });
@@ -74,3 +114,5 @@ export const getUsersWithFilters = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: 'Gagal mengambil data pengguna dengan filter.', error: err });
   }
 };
+
+

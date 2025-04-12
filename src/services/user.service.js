@@ -36,24 +36,34 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUsersWithFilterAndPagination = exports.softDeleteUserById = exports.updateUserById = exports.insertUser = exports.fetchAllUsers = void 0;
+exports.getUsersWithFilterAndPagination = exports.softDeleteUserById = exports.updateUserById = exports.insertUser = exports.fetchAllUsers = exports.findUserById = void 0;
 var prismaClient_1 = require("../utils/prismaClient");
+var client_1 = require("@prisma/client");
+var findUserById = function (id) { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, prismaClient_1.prisma.user.findUnique({ where: { id: id } })];
+            case 1: return [2 /*return*/, _a.sent()];
+        }
+    });
+}); };
+exports.findUserById = findUserById;
+// Mengambil semua user yang tidak dihapus (isDeleted false)
 function fetchAllUsers() {
     return __awaiter(this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0: return [4 /*yield*/, prismaClient_1.prisma.user.findMany({
-                        where: {
-                            isDeleted: false
-                        },
+                        where: { isDeleted: false },
                         select: {
                             id: true,
                             username: true,
                             email: true,
                             role: true,
                             isVerified: true,
-                            createdAt: true
-                        }
+                            createdAt: true,
+                        },
+                        orderBy: { createdAt: 'desc' },
                     })];
                 case 1: return [2 /*return*/, _a.sent()];
             }
@@ -61,34 +71,38 @@ function fetchAllUsers() {
     });
 }
 exports.fetchAllUsers = fetchAllUsers;
-function insertUser(_a) {
-    var id = _a.id, username = _a.username, email = _a.email, password = _a.password;
+// Menambahkan user baru ke database
+function insertUser(params) {
     return __awaiter(this, void 0, void 0, function () {
-        return __generator(this, function (_b) {
-            switch (_b.label) {
-                case 0: return [4 /*yield*/, prismaClient_1.prisma.user.create({
-                        data: {
-                            id: id,
-                            username: username,
-                            email: email,
-                            password: password
-                        }
-                    })];
-                case 1:
-                    _b.sent();
-                    return [2 /*return*/];
+        var id, username, email, password, _a, role, _b, isVerified;
+        return __generator(this, function (_c) {
+            switch (_c.label) {
+                case 0:
+                    id = params.id, username = params.username, email = params.email, password = params.password, _a = params.role, role = _a === void 0 ? client_1.Role.user : _a, _b = params.isVerified, isVerified = _b === void 0 ? false : _b;
+                    return [4 /*yield*/, prismaClient_1.prisma.user.create({
+                            data: {
+                                id: id,
+                                username: username,
+                                email: email,
+                                password: password,
+                                role: role,
+                                isVerified: isVerified,
+                            },
+                        })];
+                case 1: return [2 /*return*/, _c.sent()];
             }
         });
     });
 }
 exports.insertUser = insertUser;
-function updateUserById(_a) {
-    var id = _a.id, username = _a.username, email = _a.email, password = _a.password;
+// Memperbarui data user berdasarkan ID
+function updateUserById(params) {
     return __awaiter(this, void 0, void 0, function () {
-        var data;
-        return __generator(this, function (_b) {
-            switch (_b.label) {
+        var id, username, email, password, role, isVerified, data;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
                 case 0:
+                    id = params.id, username = params.username, email = params.email, password = params.password, role = params.role, isVerified = params.isVerified;
                     data = {};
                     if (username)
                         data.username = username;
@@ -96,36 +110,40 @@ function updateUserById(_a) {
                         data.email = email;
                     if (password)
                         data.password = password;
-                    if (Object.keys(data).length === 0)
-                        return [2 /*return*/];
+                    if (role)
+                        data.role = role;
+                    if (typeof isVerified === 'boolean')
+                        data.isVerified = isVerified;
+                    // Jika tidak ada field yang diupdate, lempar error atau kembalikan hasil
+                    if (Object.keys(data).length === 0) {
+                        throw new Error('Tidak ada data yang diperbarui.');
+                    }
                     return [4 /*yield*/, prismaClient_1.prisma.user.update({
                             where: { id: id },
-                            data: data
+                            data: data,
                         })];
-                case 1:
-                    _b.sent();
-                    return [2 /*return*/];
+                case 1: return [2 /*return*/, _a.sent()];
             }
         });
     });
 }
 exports.updateUserById = updateUserById;
+// Melakukan soft delete pada user dengan merubah status isDeleted menjadi true
 function softDeleteUserById(id) {
     return __awaiter(this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0: return [4 /*yield*/, prismaClient_1.prisma.user.update({
                         where: { id: id },
-                        data: { isDeleted: true }
+                        data: { isDeleted: true },
                     })];
-                case 1:
-                    _a.sent();
-                    return [2 /*return*/];
+                case 1: return [2 /*return*/, _a.sent()];
             }
         });
     });
 }
 exports.softDeleteUserById = softDeleteUserById;
+// Mengambil user berdasarkan filter dan pagination
 function getUsersWithFilterAndPagination(_a) {
     var keyword = _a.keyword, role = _a.role, isVerified = _a.isVerified, _b = _a.page, page = _b === void 0 ? 1 : _b, _c = _a.limit, limit = _c === void 0 ? 10 : _c;
     return __awaiter(this, void 0, void 0, function () {
@@ -133,18 +151,19 @@ function getUsersWithFilterAndPagination(_a) {
         return __generator(this, function (_d) {
             switch (_d.label) {
                 case 0:
-                    filters = {
-                        isDeleted: false
-                    };
+                    filters = { isDeleted: false };
+                    // Jika ada keyword, cari berdasarkan username atau email (pencarian case-insensitive)
                     if (keyword) {
                         filters.OR = [
                             { username: { contains: keyword, mode: 'insensitive' } },
-                            { email: { contains: keyword, mode: 'insensitive' } }
+                            { email: { contains: keyword, mode: 'insensitive' } },
                         ];
                     }
+                    // Jika filter role ditentukan, tambahkan ke filter
                     if (role) {
                         filters.role = role;
                     }
+                    // Filter untuk status verifikasi
                     if (typeof isVerified === 'boolean') {
                         filters.isVerified = isVerified;
                     }
@@ -159,13 +178,11 @@ function getUsersWithFilterAndPagination(_a) {
                                 email: true,
                                 role: true,
                                 isVerified: true,
-                                createdAt: true
+                                createdAt: true,
                             },
-                            orderBy: {
-                                createdAt: 'desc'
-                            },
+                            orderBy: { createdAt: 'desc' },
                             skip: (page - 1) * limit,
-                            take: limit
+                            take: limit,
                         })];
                 case 2:
                     users = _d.sent();
@@ -173,7 +190,7 @@ function getUsersWithFilterAndPagination(_a) {
                             data: users,
                             total: total,
                             currentPage: page,
-                            totalPages: Math.ceil(total / limit)
+                            totalPages: Math.ceil(total / limit),
                         }];
             }
         });

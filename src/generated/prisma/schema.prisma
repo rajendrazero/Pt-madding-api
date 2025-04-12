@@ -1,7 +1,6 @@
-// Prisma schema for PT-Madding App
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma" // Bisa diubah sesuai kebutuhan
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -9,12 +8,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ENUM: Role (tambahan agar lebih aman)
+enum Role {
+  user
+  admin
+  moderator
+}
+
+// MODEL: User
 model User {
   id         String   @id @default(uuid())
   username   String   @unique
   email      String   @unique
   password   String
-  role       String   @default("user")
+  role       Role     @default(user)
   isVerified Boolean  @default(false)
   isDeleted  Boolean  @default(false)
   createdAt  DateTime @default(now())
@@ -26,6 +33,7 @@ model User {
   comments Comment[]
 }
 
+// MODEL: Item
 model Item {
   id          String   @id @default(uuid())
   title       String
@@ -38,28 +46,31 @@ model Item {
   updatedAt   DateTime @updatedAt
 
   // relasi
-  createdBy   User?     @relation("UserItems", fields: [createdById], references: [id])
+  createdBy   User?   @relation("UserItems", fields: [createdById], references: [id], onDelete: SetNull)
   createdById String?
-  ratings     Rating[]
-  comments    Comment[]
+
+  ratings  Rating[]
+  comments Comment[]
 }
 
+// MODEL: Rating
 model Rating {
   id        String   @id @default(uuid())
-  rating    Int
+  rating    Int      @db.SmallInt
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // relasi
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
 
-  item   Item   @relation(fields: [itemId], references: [id])
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
   itemId String
 
   @@unique([userId, itemId])
 }
 
+// MODEL: Comment
 model Comment {
   id        String   @id @default(uuid())
   comment   String
@@ -67,9 +78,9 @@ model Comment {
   updatedAt DateTime @updatedAt
 
   // relasi
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
 
-  item   Item   @relation(fields: [itemId], references: [id])
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
   itemId String
 }
