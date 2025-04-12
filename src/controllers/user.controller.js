@@ -1,4 +1,15 @@
 "use strict";
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -36,9 +47,11 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUser = exports.updateUser = exports.createUser = exports.getAllUsers = void 0;
+exports.getUsersPaginated = exports.deleteUser = exports.updateUser = exports.createUser = exports.getAllUsers = void 0;
 var user_service_1 = require("../services/user.service");
 var uuid_1 = require("uuid");
+var user_validation_1 = require("../validations/user.validation");
+var zod_1 = require("zod");
 /**
  * Handler untuk mengambil semua user dari database
  */
@@ -67,56 +80,52 @@ exports.getAllUsers = getAllUsers;
  * Handler untuk membuat user baru
  */
 var createUser = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a, username, email, password, id, error_2;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
+    var parsed, id, error_2;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
             case 0:
-                _a = req.body, username = _a.username, email = _a.email, password = _a.password;
-                // Validasi data
-                if (!username || !email || !password) {
-                    res.status(400).json({ error: 'Field tidak lengkap!' }); // Kirim response 400 Bad Request
-                    return [2 /*return*/]; // Hentikan eksekusi
-                }
-                _b.label = 1;
-            case 1:
-                _b.trys.push([1, 3, , 4]);
+                _a.trys.push([0, 2, , 3]);
+                parsed = user_validation_1.createUserSchema.parse(req.body);
                 id = (0, uuid_1.v4)();
-                return [4 /*yield*/, (0, user_service_1.insertUser)({ id: id, username: username, email: email, password: password })];
+                return [4 /*yield*/, (0, user_service_1.insertUser)(__assign({ id: id }, parsed))];
+            case 1:
+                _a.sent();
+                res.status(201).json({ message: 'User berhasil ditambahkan', id: id });
+                return [3 /*break*/, 3];
             case 2:
-                _b.sent(); // Simpan ke DB lewat service
-                res.status(201).json({ message: 'User berhasil ditambahkan', id: id }); // Kirim response sukses
-                return [3 /*break*/, 4];
-            case 3:
-                error_2 = _b.sent();
-                console.error('Gagal menambahkan user:', error_2); // Logging jika gagal
-                res.status(500).json({ error: 'Gagal menambahkan user' }); // Kirim response 500
-                return [3 /*break*/, 4];
-            case 4: return [2 /*return*/];
+                error_2 = _a.sent();
+                if (error_2 instanceof zod_1.z.ZodError) {
+                    res.status(400).json({ error: error_2.errors.map(function (e) { return e.message; }) });
+                }
+                console.error('Gagal menambahkan user:', error_2);
+                res.status(500).json({ error: 'Gagal menambahkan user' });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
         }
     });
 }); };
 exports.createUser = createUser;
 var updateUser = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var id, _a, username, email, password, error_3;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
+    var id, parsed, error_3;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
             case 0:
                 id = req.params.id;
-                _a = req.body, username = _a.username, email = _a.email, password = _a.password;
-                if (!username && !email && !password) {
-                    res.status(400).json({ error: 'Tidak ada data yang dikirim' });
-                    return [2 /*return*/];
-                }
-                _b.label = 1;
+                _a.label = 1;
             case 1:
-                _b.trys.push([1, 3, , 4]);
-                return [4 /*yield*/, (0, user_service_1.updateUserById)({ id: id, username: username, email: email, password: password })];
+                _a.trys.push([1, 3, , 4]);
+                parsed = user_validation_1.updateUserSchema.parse(req.body);
+                return [4 /*yield*/, (0, user_service_1.updateUserById)(__assign({ id: id }, parsed))];
             case 2:
-                _b.sent();
+                _a.sent();
                 res.status(200).json({ message: 'User berhasil diupdate' });
                 return [3 /*break*/, 4];
             case 3:
-                error_3 = _b.sent();
+                error_3 = _a.sent();
+                if (error_3 instanceof zod_1.z.ZodError) {
+                    res.status(400).json({ error: error_3.errors.map(function (e) { return e.message; }) });
+                    return [2 /*return*/];
+                }
                 console.error('Gagal update user:', error_3);
                 res.status(500).json({ error: 'Gagal update user' });
                 return [3 /*break*/, 4];
@@ -149,3 +158,31 @@ var deleteUser = function (req, res) { return __awaiter(void 0, void 0, void 0, 
     });
 }); };
 exports.deleteUser = deleteUser;
+var getUsersPaginated = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var _a, keyword, role, is_verified, _b, page, _c, limit, data, error_5;
+    return __generator(this, function (_d) {
+        switch (_d.label) {
+            case 0:
+                _d.trys.push([0, 2, , 3]);
+                _a = req.query, keyword = _a.keyword, role = _a.role, is_verified = _a.is_verified, _b = _a.page, page = _b === void 0 ? '1' : _b, _c = _a.limit, limit = _c === void 0 ? '10' : _c;
+                return [4 /*yield*/, (0, user_service_1.getUsersWithFilterAndPagination)({
+                        keyword: keyword === null || keyword === void 0 ? void 0 : keyword.toString(),
+                        role: role === null || role === void 0 ? void 0 : role.toString(),
+                        is_verified: is_verified === 'true' ? true : is_verified === 'false' ? false : undefined,
+                        page: parseInt(page),
+                        limit: parseInt(limit)
+                    })];
+            case 1:
+                data = _d.sent();
+                res.status(200).json(data);
+                return [3 /*break*/, 3];
+            case 2:
+                error_5 = _d.sent();
+                console.error('Gagal filter + pagination:', error_5);
+                res.status(500).json({ error: 'Terjadi kesalahan saat filter data user' });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); };
+exports.getUsersPaginated = getUsersPaginated;

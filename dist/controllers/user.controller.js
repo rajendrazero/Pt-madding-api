@@ -1,8 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUser = exports.updateUser = exports.createUser = exports.getAllUsers = void 0;
+exports.getUsersPaginated = exports.deleteUser = exports.updateUser = exports.createUser = exports.getAllUsers = void 0;
 const user_service_1 = require("../services/user.service");
 const uuid_1 = require("uuid");
+const user_validation_1 = require("../validations/user.validation");
+const zod_1 = require("zod");
 /**
  * Handler untuk mengambil semua user dari database
  */
@@ -21,35 +23,33 @@ exports.getAllUsers = getAllUsers;
  * Handler untuk membuat user baru
  */
 const createUser = async (req, res) => {
-    const { username, email, password } = req.body; // Ambil data dari body
-    // Validasi data
-    if (!username || !email || !password) {
-        res.status(400).json({ error: 'Field tidak lengkap!' }); // Kirim response 400 Bad Request
-        return; // Hentikan eksekusi
-    }
     try {
-        const id = (0, uuid_1.v4)(); // Generate UUID unik
-        await (0, user_service_1.insertUser)({ id, username, email, password }); // Simpan ke DB lewat service
-        res.status(201).json({ message: 'User berhasil ditambahkan', id }); // Kirim response sukses
+        const parsed = user_validation_1.createUserSchema.parse(req.body); // Validasi pakai Zod
+        const id = (0, uuid_1.v4)();
+        await (0, user_service_1.insertUser)({ id, ...parsed });
+        res.status(201).json({ message: 'User berhasil ditambahkan', id });
     }
     catch (error) {
-        console.error('Gagal menambahkan user:', error); // Logging jika gagal
-        res.status(500).json({ error: 'Gagal menambahkan user' }); // Kirim response 500
+        if (error instanceof zod_1.z.ZodError) {
+            res.status(400).json({ error: error.errors.map(e => e.message) });
+        }
+        console.error('Gagal menambahkan user:', error);
+        res.status(500).json({ error: 'Gagal menambahkan user' });
     }
 };
 exports.createUser = createUser;
 const updateUser = async (req, res) => {
     const { id } = req.params;
-    const { username, email, password } = req.body;
-    if (!username && !email && !password) {
-        res.status(400).json({ error: 'Tidak ada data yang dikirim' });
-        return;
-    }
     try {
-        await (0, user_service_1.updateUserById)({ id, username, email, password });
+        const parsed = user_validation_1.updateUserSchema.parse(req.body); // Validasi update
+        await (0, user_service_1.updateUserById)({ id, ...parsed });
         res.status(200).json({ message: 'User berhasil diupdate' });
     }
     catch (error) {
+        if (error instanceof zod_1.z.ZodError) {
+            res.status(400).json({ error: error.errors.map(e => e.message) });
+            return;
+        }
         console.error('Gagal update user:', error);
         res.status(500).json({ error: 'Gagal update user' });
     }
@@ -67,3 +67,21 @@ const deleteUser = async (req, res) => {
     }
 };
 exports.deleteUser = deleteUser;
+const getUsersPaginated = async (req, res) => {
+    try {
+        const { keyword, role, is_verified, page = '1', limit = '10' } = req.query;
+        const data = await (0, user_service_1.getUsersWithFilterAndPagination)({
+            keyword: keyword?.toString(),
+            role: role?.toString(),
+            is_verified: is_verified === 'true' ? true : is_verified === 'false' ? false : undefined,
+            page: parseInt(page),
+            limit: parseInt(limit)
+        });
+        res.status(200).json(data);
+    }
+    catch (error) {
+        console.error('Gagal filter + pagination:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan saat filter data user' });
+    }
+};
+exports.getUsersPaginated = getUsersPaginated;

@@ -5,6 +5,7 @@ const user_controller_1 = require("../controllers/user.controller");
 const router = (0, express_1.Router)();
 router.post('/', user_controller_1.createUser);
 router.get('/', user_controller_1.getAllUsers);
-router.put('/:id', user_controller_1.updateUser); // Untuk edit user
-router.delete('/:id', user_controller_1.deleteUser); // Untuk hapus user (soft delete)
+router.put('/:id', user_controller_1.updateUser);
+router.delete('/:id', user_controller_1.deleteUser);
+router.get('/search', user_controller_1.getUsersPaginated);
 exports.default = router;

@@ -4,6 +4,7 @@ exports.fetchAllUsers = fetchAllUsers;
 exports.insertUser = insertUser;
 exports.updateUserById = updateUserById;
 exports.softDeleteUserById = softDeleteUserById;
+exports.getUsersWithFilterAndPagination = getUsersWithFilterAndPagination;
 const db_1 = require("../utils/db");
 // Pool adalah koneksi ke PostgreSQL
 async function fetchAllUsers() {
@@ -44,4 +45,45 @@ async function updateUserById({ id, username, email, password, }) {
 }
 async function softDeleteUserById(id) {
     await db_1.pool.query(`UPDATE users SET is_deleted = true WHERE id = $1`, [id]);
+}
+async function getUsersWithFilterAndPagination({ keyword, role, is_verified, page = 1, limit = 10 }) {
+    const values = [];
+    const filters = ['is_deleted = false'];
+    let idx = 1;
+    if (keyword) {
+        filters.push(`(username ILIKE $${idx} OR email ILIKE $${idx})`);
+        values.push(`%${keyword}%`);
+        idx++;
+    }
+    if (role) {
+        filters.push(`role = $${idx}`);
+        values.push(role);
+        idx++;
+    }
+    if (typeof is_verified === 'boolean') {
+        filters.push(`is_verified = $${idx}`);
+        values.push(is_verified);
+        idx++;
+    }
+    const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
+    const offset = (page - 1) * limit;
+    // Ambil total count
+    const countQuery = `SELECT COUNT(*) FROM users ${whereClause}`;
+    const countRes = await db_1.pool.query(countQuery, values);
+    const total = parseInt(countRes.rows[0].count, 10);
+    // Ambil data pengguna
+    const dataQuery = `
+    SELECT id, username, email, role, is_verified, created_at
+    FROM users
+    ${whereClause}
+    ORDER BY created_at DESC
+    LIMIT $${idx} OFFSET $${idx + 1}
+  `;
+    const dataRes = await db_1.pool.query(dataQuery, [...values, limit, offset]);
+    return {
+        data: dataRes.rows,
+        total,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+    };
 }

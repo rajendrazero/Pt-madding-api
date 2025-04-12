@@ -35,8 +35,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.softDeleteUserById = exports.updateUserById = exports.insertUser = exports.fetchAllUsers = void 0;
+exports.getUsersWithFilterAndPagination = exports.softDeleteUserById = exports.updateUserById = exports.insertUser = exports.fetchAllUsers = void 0;
 var db_1 = require("../utils/db");
 // Pool adalah koneksi ke PostgreSQL
 function fetchAllUsers() {
@@ -115,3 +124,50 @@ function softDeleteUserById(id) {
     });
 }
 exports.softDeleteUserById = softDeleteUserById;
+function getUsersWithFilterAndPagination(_a) {
+    var keyword = _a.keyword, role = _a.role, is_verified = _a.is_verified, _b = _a.page, page = _b === void 0 ? 1 : _b, _c = _a.limit, limit = _c === void 0 ? 10 : _c;
+    return __awaiter(this, void 0, void 0, function () {
+        var values, filters, idx, whereClause, offset, countQuery, countRes, total, dataQuery, dataRes;
+        return __generator(this, function (_d) {
+            switch (_d.label) {
+                case 0:
+                    values = [];
+                    filters = ['is_deleted = false'];
+                    idx = 1;
+                    if (keyword) {
+                        filters.push("(username ILIKE $".concat(idx, " OR email ILIKE $").concat(idx, ")"));
+                        values.push("%".concat(keyword, "%"));
+                        idx++;
+                    }
+                    if (role) {
+                        filters.push("role = $".concat(idx));
+                        values.push(role);
+                        idx++;
+                    }
+                    if (typeof is_verified === 'boolean') {
+                        filters.push("is_verified = $".concat(idx));
+                        values.push(is_verified);
+                        idx++;
+                    }
+                    whereClause = filters.length > 0 ? "WHERE ".concat(filters.join(' AND ')) : '';
+                    offset = (page - 1) * limit;
+                    countQuery = "SELECT COUNT(*) FROM users ".concat(whereClause);
+                    return [4 /*yield*/, db_1.pool.query(countQuery, values)];
+                case 1:
+                    countRes = _d.sent();
+                    total = parseInt(countRes.rows[0].count, 10);
+                    dataQuery = "\n    SELECT id, username, email, role, is_verified, created_at\n    FROM users\n    ".concat(whereClause, "\n    ORDER BY created_at DESC\n    LIMIT $").concat(idx, " OFFSET $").concat(idx + 1, "\n  ");
+                    return [4 /*yield*/, db_1.pool.query(dataQuery, __spreadArray(__spreadArray([], values, true), [limit, offset], false))];
+                case 2:
+                    dataRes = _d.sent();
+                    return [2 /*return*/, {
+                            data: dataRes.rows,
+                            total: total,
+                            currentPage: page,
+                            totalPages: Math.ceil(total / limit),
+                        }];
+            }
+        });
+    });
+}
+exports.getUsersWithFilterAndPagination = getUsersWithFilterAndPagination;

@@ -72,3 +72,65 @@ export async function softDeleteUserById(id: string) {
     [id]
   );
 }
+
+
+export async function getUsersWithFilterAndPagination({
+  keyword,
+  role,
+  is_verified,
+  page = 1,
+  limit = 10
+}: {
+  keyword?: string;
+  role?: string;
+  is_verified?: boolean;
+  page?: number;
+  limit?: number;
+}) {
+  const values: any[] = [];
+  const filters: string[] = ['is_deleted = false'];
+  let idx = 1;
+
+  if (keyword) {
+    filters.push(`(username ILIKE $${idx} OR email ILIKE $${idx})`);
+    values.push(`%${keyword}%`);
+    idx++;
+  }
+
+  if (role) {
+    filters.push(`role = $${idx}`);
+    values.push(role);
+    idx++;
+  }
+
+  if (typeof is_verified === 'boolean') {
+    filters.push(`is_verified = $${idx}`);
+    values.push(is_verified);
+    idx++;
+  }
+
+  const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
+  const offset = (page - 1) * limit;
+
+  // Ambil total count
+  const countQuery = `SELECT COUNT(*) FROM users ${whereClause}`;
+  const countRes = await pool.query(countQuery, values);
+  const total = parseInt(countRes.rows[0].count, 10);
+
+  // Ambil data pengguna
+  const dataQuery = `
+    SELECT id, username, email, role, is_verified, created_at
+    FROM users
+    ${whereClause}
+    ORDER BY created_at DESC
+    LIMIT $${idx} OFFSET $${idx + 1}
+  `;
+  const dataRes = await pool.query(dataQuery, [...values, limit, offset]);
+
+  return {
+    data: dataRes.rows,
+    total,
+    currentPage: page,
+    totalPages: Math.ceil(total / limit),
+  };
+}
