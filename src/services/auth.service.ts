@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { sendEmail } from '../utils/mailer';
 import { pool } from '../utils/db';
-
+import { generateToken } from '../utils/jwt'; 
 
 // Generate random 6-digit code
 const generateVerificationCode = (): string => {

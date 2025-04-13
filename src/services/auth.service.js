@@ -41,6 +41,7 @@ var bcryptjs_1 = require("bcryptjs");
 var uuid_1 = require("uuid");
 var mailer_1 = require("../utils/mailer");
 var db_1 = require("../utils/db");
+var jwt_1 = require("../utils/jwt");
 // Generate random 6-digit code
 var generateVerificationCode = function () {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -162,7 +163,7 @@ var loginUser = function (email, password) { return __awaiter(void 0, void 0, Pr
                 if (!valid)
                     throw new Error('Password salah');
                 // Generate JWT token
-                return [2 /*return*/, generateToken(user.id, user.email, user.role)]; // Pastikan ini mengembalikan objek dengan accessToken dan refreshToken
+                return [2 /*return*/, (0, jwt_1.generateToken)(user.id, user.email, user.role)]; // Pastikan ini mengembalikan objek dengan accessToken dan refreshToken
         }
     });
 }); };

@@ -4,6 +4,7 @@ exports.refreshToken = exports.login = exports.resendCode = exports.verifyCode =
 const auth_validation_1 = require("../validations/auth.validation");
 const auth_service_1 = require("../services/auth.service");
 const zod_1 = require("zod"); // Pastikan ZodError diimpor dari Zod
+const auth_middleware_js_1 = require("../middlewares/auth.middleware.js");
 const register = async (req, res) => {
     try {
         // Validasi input
@@ -97,7 +98,7 @@ const refreshToken = async (req, res) => {
     const refreshToken = req.body.refreshToken;
     try {
         // Panggil service untuk menangani refresh token
-        const { accessToken, refreshToken: newRefreshToken } = await (0, auth_service_1.handleRefreshToken)(refreshToken);
+        const { accessToken, refreshToken: newRefreshToken } = await (0, auth_middleware_js_1.handleRefreshToken)(refreshToken);
         // Kirimkan kembali access token dan refresh token baru ke client
         res.status(200).json({ accessToken, refreshToken: newRefreshToken });
     }
