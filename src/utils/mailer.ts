@@ -1,11 +1,19 @@
 import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
 
-// Konfigurasi transporter email (gunakan Gmail atau SMTP lainnya)
+dotenv.config(); 
+const user = process.env.EMAIL_USER?.trim();
+const pass = process.env.EMAIL_PASS?.trim();
+
+if (!user || !pass) {
+  throw new Error('EMAIL_USER atau EMAIL_PASS tidak di-set atau kosong.');
+}
+
 export const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER, // Gantilah dengan alamat email pengirim
-    pass: process.env.EMAIL_PASS, // Gantilah dengan App Password yang kamu buat di Google Account
+    user,
+    pass,
   },
 });
 
@@ -20,10 +28,12 @@ export const sendEmail = async (to: string, subject: string, text: string) => {
     });
 
     console.log('Email berhasil dikirim:', info.response);
-  } catch (error) {
-    console.error('Gagal mengirim email:', error);
-    console.log('EMAIL_USER:', process.env.EMAIL_USER);
-    console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? 'Ditemukan' : 'Kosong');
+  } catch (error: any) {
+  console.error('Gagal mengirim email:', error);
+  console.log('ERROR MESSAGE:', error.message);
+  console.log('ERROR RESPONSE:', error.response);
+  console.log('ERROR CODE:', error.code);
+
     throw new Error('Gagal mengirim email');
   }
 };

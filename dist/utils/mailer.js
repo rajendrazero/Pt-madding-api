@@ -5,12 +5,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendEmail = exports.transporter = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
-// Konfigurasi transporter email (gunakan Gmail atau SMTP lainnya)
+const dotenv_1 = __importDefault(require("dotenv"));
+dotenv_1.default.config();
+const user = process.env.EMAIL_USER?.trim();
+const pass = process.env.EMAIL_PASS?.trim();
+if (!user || !pass) {
+    throw new Error('EMAIL_USER atau EMAIL_PASS tidak di-set atau kosong.');
+}
 exports.transporter = nodemailer_1.default.createTransport({
     service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER, // Gantilah dengan alamat email pengirim
-        pass: process.env.EMAIL_PASS, // Gantilah dengan App Password yang kamu buat di Google Account
+        user,
+        pass,
     },
 });
 // Fungsi untuk mengirim email
@@ -26,8 +32,9 @@ const sendEmail = async (to, subject, text) => {
     }
     catch (error) {
         console.error('Gagal mengirim email:', error);
-        console.log('EMAIL_USER:', process.env.EMAIL_USER);
-        console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? 'Ditemukan' : 'Kosong');
+        console.log('ERROR MESSAGE:', error.message);
+        console.log('ERROR RESPONSE:', error.response);
+        console.log('ERROR CODE:', error.code);
         throw new Error('Gagal mengirim email');
     }
 };

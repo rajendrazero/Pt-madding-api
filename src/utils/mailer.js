@@ -35,15 +35,22 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendEmail = exports.transporter = void 0;
 var nodemailer_1 = require("nodemailer");
-// Konfigurasi transporter email (gunakan Gmail atau SMTP lainnya)
+var dotenv_1 = require("dotenv");
+dotenv_1.default.config();
+var user = (_a = process.env.EMAIL_USER) === null || _a === void 0 ? void 0 : _a.trim();
+var pass = (_b = process.env.EMAIL_PASS) === null || _b === void 0 ? void 0 : _b.trim();
+if (!user || !pass) {
+    throw new Error('EMAIL_USER atau EMAIL_PASS tidak di-set atau kosong.');
+}
 exports.transporter = nodemailer_1.default.createTransport({
     service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS, // Gantilah dengan App Password yang kamu buat di Google Account
+        user: user,
+        pass: pass,
     },
 });
 // Fungsi untuk mengirim email
@@ -66,8 +73,9 @@ var sendEmail = function (to, subject, text) { return __awaiter(void 0, void 0, 
             case 2:
                 error_1 = _a.sent();
                 console.error('Gagal mengirim email:', error_1);
-                console.log('EMAIL_USER:', process.env.EMAIL_USER);
-                console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? 'Ditemukan' : 'Kosong');
+                console.log('ERROR MESSAGE:', error_1.message);
+                console.log('ERROR RESPONSE:', error_1.response);
+                console.log('ERROR CODE:', error_1.code);
                 throw new Error('Gagal mengirim email');
             case 3: return [2 /*return*/];
         }
