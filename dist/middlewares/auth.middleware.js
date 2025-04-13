@@ -1,4 +1,13 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -7,7 +16,8 @@ exports.handleRefreshToken = exports.checkRole = exports.verifyToken = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const jwt_1 = require("../utils/jwt");
 const verifyToken = (req, res, next) => {
-    const token = req.headers.authorization?.split(' ')[1];
+    var _a;
+    const token = (_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split(' ')[1];
     if (!token) {
         res.status(403).json({ error: 'Token tidak ditemukan' });
         return;
@@ -25,7 +35,8 @@ const verifyToken = (req, res, next) => {
 exports.verifyToken = verifyToken;
 const checkRole = (role) => {
     return (req, res, next) => {
-        const userRole = req.user?.role;
+        var _a;
+        const userRole = (_a = req.user) === null || _a === void 0 ? void 0 : _a.role;
         if (userRole !== role) {
             res.status(403).json({ error: 'Akses ditolak. Role tidak sesuai.' });
             return;
@@ -34,7 +45,7 @@ const checkRole = (role) => {
     };
 };
 exports.checkRole = checkRole;
-const handleRefreshToken = async (refreshToken) => {
+const handleRefreshToken = (refreshToken) => __awaiter(void 0, void 0, void 0, function* () {
     if (!refreshToken) {
         throw new Error('Refresh token tidak ditemukan');
     }
@@ -47,5 +58,5 @@ const handleRefreshToken = async (refreshToken) => {
     catch (err) {
         throw new Error('Refresh token tidak valid atau sudah kadaluarsa');
     }
-};
+});
 exports.handleRefreshToken = handleRefreshToken;
