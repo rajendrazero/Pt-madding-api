@@ -3,11 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cleanUnverified = exports.resendVerificationCode = exports.verifyUserCode = exports.registerUser = void 0;
+exports.loginUser = exports.cleanUnverified = exports.resendVerificationCode = exports.verifyUserCode = exports.registerUser = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const uuid_1 = require("uuid");
 const mailer_1 = require("../utils/mailer");
 const db_1 = require("../utils/db");
+const jwt_1 = require("../utils/jwt");
 // Generate random 6-digit code
 const generateVerificationCode = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -63,3 +64,18 @@ const cleanUnverified = async () => {
   `);
 };
 exports.cleanUnverified = cleanUnverified;
+const loginUser = async (email, password) => {
+    const { rows } = await db_1.pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (!rows.length)
+        throw new Error('Email tidak ditemukan');
+    const user = rows[0];
+    if (!user.is_verified)
+        throw new Error('Akun belum diverifikasi');
+    const valid = await bcryptjs_1.default.compare(password, user.password);
+    if (!valid)
+        throw new Error('Password salah');
+    // Generate JWT token
+    const token = (0, jwt_1.generateToken)(user.id, user.email);
+    return token;
+};
+exports.loginUser = loginUser;

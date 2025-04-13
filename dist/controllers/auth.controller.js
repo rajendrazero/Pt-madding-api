@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.resendCode = exports.verifyCode = exports.register = void 0;
+exports.login = exports.resendCode = exports.verifyCode = exports.register = void 0;
 const AuthService = __importStar(require("../services/auth.service"));
 const auth_validation_1 = require("../validations/auth.validation");
 const zod_1 = require("zod");
@@ -85,3 +85,14 @@ const resendCode = async (req, res) => {
     }
 };
 exports.resendCode = resendCode;
+const login = async (req, res) => {
+    try {
+        const { email, password } = auth_validation_1.loginSchema.parse(req.body);
+        const token = await AuthService.loginUser(email, password);
+        res.status(200).json({ message: 'Login berhasil', token });
+    }
+    catch (err) {
+        handleError(err, res);
+    }
+};
+exports.login = login;

@@ -18,3 +18,9 @@ export const verifyCodeSchema = z.object({
 export const resendCodeSchema = z.object({
   email: z.string().email({ message: 'Email tidak valid' })
 });
+
+
+export const loginSchema = z.object({
+  email: z.string().email({ message: 'Email tidak valid' }),
+  password: z.string().min(6, { message: 'Password wajib diisi' })
+});

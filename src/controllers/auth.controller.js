@@ -36,7 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.resendCode = exports.verifyCode = exports.register = void 0;
+exports.login = exports.resendCode = exports.verifyCode = exports.register = void 0;
 var AuthService = require("../services/auth.service");
 var auth_validation_1 = require("../validations/auth.validation");
 var zod_1 = require("zod");
@@ -118,3 +118,24 @@ var resendCode = function (req, res) { return __awaiter(void 0, void 0, Promise,
     });
 }); };
 exports.resendCode = resendCode;
+var login = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
+    var _a, email, password, token, err_4;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 2, , 3]);
+                _a = auth_validation_1.loginSchema.parse(req.body), email = _a.email, password = _a.password;
+                return [4 /*yield*/, AuthService.loginUser(email, password)];
+            case 1:
+                token = _b.sent();
+                res.status(200).json({ message: 'Login berhasil', token: token });
+                return [3 /*break*/, 3];
+            case 2:
+                err_4 = _b.sent();
+                handleError(err_4, res);
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); };
+exports.login = login;

@@ -36,11 +36,12 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cleanUnverified = exports.resendVerificationCode = exports.verifyUserCode = exports.registerUser = void 0;
+exports.loginUser = exports.cleanUnverified = exports.resendVerificationCode = exports.verifyUserCode = exports.registerUser = void 0;
 var bcryptjs_1 = require("bcryptjs");
 var uuid_1 = require("uuid");
 var mailer_1 = require("../utils/mailer");
 var db_1 = require("../utils/db");
+var jwt_1 = require("../utils/jwt");
 // Generate random 6-digit code
 var generateVerificationCode = function () {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -144,3 +145,26 @@ var cleanUnverified = function () { return __awaiter(void 0, void 0, Promise, fu
     });
 }); };
 exports.cleanUnverified = cleanUnverified;
+var loginUser = function (email, password) { return __awaiter(void 0, void 0, Promise, function () {
+    var rows, user, valid, token;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, db_1.pool.query('SELECT * FROM users WHERE email = $1', [email])];
+            case 1:
+                rows = (_a.sent()).rows;
+                if (!rows.length)
+                    throw new Error('Email tidak ditemukan');
+                user = rows[0];
+                if (!user.is_verified)
+                    throw new Error('Akun belum diverifikasi');
+                return [4 /*yield*/, bcryptjs_1.default.compare(password, user.password)];
+            case 2:
+                valid = _a.sent();
+                if (!valid)
+                    throw new Error('Password salah');
+                token = (0, jwt_1.generateToken)(user.id, user.email);
+                return [2 /*return*/, token];
+        }
+    });
+}); };
+exports.loginUser = loginUser;

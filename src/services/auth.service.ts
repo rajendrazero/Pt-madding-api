@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { sendEmail } from '../utils/mailer';
 import { pool } from '../utils/db';
+import { generateToken } from '../utils/jwt'; 
 
 // Generate random 6-digit code
 const generateVerificationCode = (): string => {
@@ -65,4 +66,20 @@ export const cleanUnverified = async (): Promise<void> => {
     DELETE FROM users
     WHERE is_verified = false AND created_at < NOW() - INTERVAL '24 hours'
   `);
+};
+
+export const loginUser = async (email: string, password: string): Promise<string> => {
+  const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+  if (!rows.length) throw new Error('Email tidak ditemukan');
+
+  const user = rows[0];
+  if (!user.is_verified) throw new Error('Akun belum diverifikasi');
+
+  const valid = await bcrypt.compare(password, user.password);
+  if (!valid) throw new Error('Password salah');
+
+  // Generate JWT token
+  const token = generateToken(user.id, user.email);
+
+  return token;
 };

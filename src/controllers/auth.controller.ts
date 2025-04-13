@@ -1,6 +1,6 @@
 import { Request, Response, RequestHandler } from 'express';
 import * as AuthService from '../services/auth.service';
-import { registerSchema, verifyCodeSchema, resendCodeSchema } from '../validations/auth.validation';
+import { registerSchema, verifyCodeSchema, resendCodeSchema, loginSchema} from '../validations/auth.validation';
 import { z } from 'zod';
 
 // Fungsi untuk menangani error
@@ -42,6 +42,17 @@ export const resendCode: RequestHandler = async (req, res): Promise<void> => {
     const { email } = resendCodeSchema.parse(req.body);
     await AuthService.resendVerificationCode(email);
     res.status(200).json({ message: 'Kode verifikasi berhasil dikirim ulang' });
+  } catch (err) {
+    handleError(err, res);
+  }
+};
+
+
+export const login: RequestHandler = async (req, res): Promise<void> => {
+  try {
+    const { email, password } = loginSchema.parse(req.body);
+    const token = await AuthService.loginUser(email, password);
+    res.status(200).json({ message: 'Login berhasil', token });
   } catch (err) {
     handleError(err, res);
   }
