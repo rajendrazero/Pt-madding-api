@@ -53,7 +53,7 @@ function fetchAllUsers() {
         var res;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, db_1.pool.query("\n    SELECT id, username, email, role, is_verified, created_at\n    FROM users\n    WHERE is_deleted = false\n  ")];
+                case 0: return [4 /*yield*/, db_1.pool.query("\n    SELECT id, username, email, role, is_verified, created_at\n    FROM users\n    WHERE is_deleted = false AND is_verified = true\n  ")];
                 case 1:
                     res = _a.sent();
                     return [2 /*return*/, res.rows];
@@ -87,7 +87,7 @@ function updateUserById(_a) {
                     if (fields.length === 0)
                         return [2 /*return*/];
                     values.push(id);
-                    query = "UPDATE users SET ".concat(fields.join(', '), " WHERE id = $").concat(idx);
+                    query = "\n    UPDATE users\n    SET ".concat(fields.join(', '), "\n    WHERE id = $").concat(idx, " AND is_verified = true\n  ");
                     return [4 /*yield*/, db_1.pool.query(query, values)];
                 case 1:
                     _b.sent();
@@ -101,7 +101,7 @@ function softDeleteUserById(id) {
     return __awaiter(this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, db_1.pool.query("UPDATE users SET is_deleted = true WHERE id = $1", [id])];
+                case 0: return [4 /*yield*/, db_1.pool.query("UPDATE users SET is_deleted = true WHERE id = $1 AND is_verified = true", [id])];
                 case 1:
                     _a.sent();
                     return [2 /*return*/];
@@ -130,11 +130,10 @@ function getUsersWithFilterAndPagination(_a) {
                         values.push(role);
                         idx++;
                     }
-                    if (typeof is_verified === 'boolean') {
-                        filters.push("is_verified = $".concat(idx));
-                        values.push(is_verified);
-                        idx++;
-                    }
+                    // Selalu filter hanya user yang terverifikasi, default true
+                    filters.push("is_verified = $".concat(idx));
+                    values.push(is_verified !== null && is_verified !== void 0 ? is_verified : true); // kalau undefined, jadi true
+                    idx++;
                     whereClause = filters.length > 0 ? "WHERE ".concat(filters.join(' AND ')) : '';
                     offset = (page - 1) * limit;
                     countQuery = "SELECT COUNT(*) FROM users ".concat(whereClause);
@@ -161,7 +160,7 @@ function recoverUserById(id) {
     return __awaiter(this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, db_1.pool.query("UPDATE users SET is_deleted = false WHERE id = $1", [id])];
+                case 0: return [4 /*yield*/, db_1.pool.query("UPDATE users SET is_deleted = false WHERE id = $1 AND is_verified = true", [id])];
                 case 1:
                     _a.sent();
                     return [2 /*return*/];

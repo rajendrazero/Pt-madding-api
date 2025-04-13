@@ -5,7 +5,7 @@ export async function fetchAllUsers() {
   const res = await pool.query(`
     SELECT id, username, email, role, is_verified, created_at
     FROM users
-    WHERE is_deleted = false
+    WHERE is_deleted = false AND is_verified = true
   `);
   return res.rows;
 }
@@ -42,13 +42,18 @@ export async function updateUserById({
   if (fields.length === 0) return;
 
   values.push(id);
-  const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx}`;
+  const query = `
+    UPDATE users
+    SET ${fields.join(', ')}
+    WHERE id = $${idx} AND is_verified = true
+  `;
   await pool.query(query, values);
 }
 
+
 export async function softDeleteUserById(id: string) {
   await pool.query(
-    `UPDATE users SET is_deleted = true WHERE id = $1`,
+    `UPDATE users SET is_deleted = true WHERE id = $1 AND is_verified = true`,
     [id]
   );
 }
@@ -82,21 +87,18 @@ export async function getUsersWithFilterAndPagination({
     idx++;
   }
 
-  if (typeof is_verified === 'boolean') {
-    filters.push(`is_verified = $${idx}`);
-    values.push(is_verified);
-    idx++;
-  }
+  // Selalu filter hanya user yang terverifikasi, default true
+  filters.push(`is_verified = $${idx}`);
+  values.push(is_verified ?? true); // kalau undefined, jadi true
+  idx++;
 
   const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
   const offset = (page - 1) * limit;
 
-  // Ambil total count
   const countQuery = `SELECT COUNT(*) FROM users ${whereClause}`;
   const countRes = await pool.query(countQuery, values);
   const total = parseInt(countRes.rows[0].count, 10);
 
-  // Ambil data pengguna
   const dataQuery = `
     SELECT id, username, email, role, is_verified, created_at
     FROM users
@@ -117,7 +119,7 @@ export async function getUsersWithFilterAndPagination({
 
 export async function recoverUserById(id: string) {
   await pool.query(
-    `UPDATE users SET is_deleted = false WHERE id = $1`,
+    `UPDATE users SET is_deleted = false WHERE id = $1 AND is_verified = true`,
     [id]
   );
 }

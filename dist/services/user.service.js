@@ -12,7 +12,7 @@ async function fetchAllUsers() {
     const res = await db_1.pool.query(`
     SELECT id, username, email, role, is_verified, created_at
     FROM users
-    WHERE is_deleted = false
+    WHERE is_deleted = false AND is_verified = true
   `);
     return res.rows;
 }
@@ -35,11 +35,15 @@ async function updateUserById({ id, username, email, password, }) {
     if (fields.length === 0)
         return;
     values.push(id);
-    const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx}`;
+    const query = `
+    UPDATE users
+    SET ${fields.join(', ')}
+    WHERE id = $${idx} AND is_verified = true
+  `;
     await db_1.pool.query(query, values);
 }
 async function softDeleteUserById(id) {
-    await db_1.pool.query(`UPDATE users SET is_deleted = true WHERE id = $1`, [id]);
+    await db_1.pool.query(`UPDATE users SET is_deleted = true WHERE id = $1 AND is_verified = true`, [id]);
 }
 async function getUsersWithFilterAndPagination({ keyword, role, is_verified, page = 1, limit = 10 }) {
     const values = [];
@@ -55,18 +59,15 @@ async function getUsersWithFilterAndPagination({ keyword, role, is_verified, pag
         values.push(role);
         idx++;
     }
-    if (typeof is_verified === 'boolean') {
-        filters.push(`is_verified = $${idx}`);
-        values.push(is_verified);
-        idx++;
-    }
+    // Selalu filter hanya user yang terverifikasi, default true
+    filters.push(`is_verified = $${idx}`);
+    values.push(is_verified ?? true); // kalau undefined, jadi true
+    idx++;
     const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
     const offset = (page - 1) * limit;
-    // Ambil total count
     const countQuery = `SELECT COUNT(*) FROM users ${whereClause}`;
     const countRes = await db_1.pool.query(countQuery, values);
     const total = parseInt(countRes.rows[0].count, 10);
-    // Ambil data pengguna
     const dataQuery = `
     SELECT id, username, email, role, is_verified, created_at
     FROM users
@@ -83,14 +84,14 @@ async function getUsersWithFilterAndPagination({ keyword, role, is_verified, pag
     };
 }
 async function recoverUserById(id) {
-    await db_1.pool.query(`UPDATE users SET is_deleted = false WHERE id = $1`, [id]);
+    await db_1.pool.query(`UPDATE users SET is_deleted = false WHERE id = $1 AND is_verified = true`, [id]);
 }
 async function deleteOldSoftDeletedUsers() {
-    console.log('Menghapus pengguna soft-deleted lebih dari 3 menit');
+    console.log('Menghapus pengguna soft-deleted lebih dari 1 hari');
     try {
         const result = await db_1.pool.query(`
       DELETE FROM users
-      WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '3 MINUTE'
+      WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '1 DAY'
     `);
         console.log(`${result.rowCount} pengguna dihapus`);
     }
