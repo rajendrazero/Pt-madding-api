@@ -1,98 +1,109 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.login = exports.resendCode = exports.verifyCode = exports.register = void 0;
-const AuthService = __importStar(require("../services/auth.service"));
+exports.refreshToken = exports.login = exports.resendCode = exports.verifyCode = exports.register = void 0;
 const auth_validation_1 = require("../validations/auth.validation");
-const zod_1 = require("zod");
-// Fungsi untuk menangani error
-const handleError = (err, res) => {
-    if (err instanceof zod_1.z.ZodError) {
-        res.status(400).json({ error: err.errors.map(e => e.message) });
-    }
-    else if (err instanceof Error) {
-        res.status(400).json({ error: err.message });
-    }
-    else {
-        res.status(400).json({ error: 'Terjadi kesalahan tak dikenal' });
-    }
-};
-// Register dan kirim kode verifikasi
+const auth_service_1 = require("../services/auth.service");
+const zod_1 = require("zod"); // Pastikan ZodError diimpor dari Zod
 const register = async (req, res) => {
     try {
-        const { username, email, password } = auth_validation_1.registerSchema.parse(req.body);
-        await AuthService.registerUser(username, email, password);
-        res.status(200).json({ message: 'Registrasi berhasil. Kode verifikasi telah dikirim ke email.' });
+        // Validasi input
+        const validatedData = auth_validation_1.registerSchema.parse(req.body);
+        const { username, email, password } = validatedData;
+        // Panggil service untuk registrasi
+        await (0, auth_service_1.registerUser)(username, email, password);
+        res.status(201).json({ message: 'Registrasi berhasil. Cek email untuk kode verifikasi.' });
     }
-    catch (err) {
-        handleError(err, res);
+    catch (error) {
+        if (error instanceof zod_1.ZodError) {
+            res.status(400).json({ error: error.errors });
+        }
+        else if (error instanceof Error) {
+            res.status(500).json({ error: error.message });
+        }
+        else {
+            res.status(500).json({ error: 'Terjadi kesalahan yang tidak diketahui' });
+        }
     }
 };
 exports.register = register;
-// Verifikasi kode
 const verifyCode = async (req, res) => {
     try {
-        const { email, code } = auth_validation_1.verifyCodeSchema.parse(req.body);
-        await AuthService.verifyUserCode(email, code);
-        res.status(201).json({ message: 'Registrasi berhasil dan akun telah diverifikasi' });
+        // Validasi input
+        const validatedData = auth_validation_1.verifyCodeSchema.parse(req.body);
+        const { email, code } = validatedData;
+        // Panggil service untuk verifikasi kode
+        await (0, auth_service_1.verifyUserCode)(email, code);
+        res.status(200).json({ message: 'Akun berhasil diverifikasi' });
     }
-    catch (err) {
-        handleError(err, res);
+    catch (error) {
+        if (error instanceof zod_1.ZodError) {
+            res.status(400).json({ error: error.errors });
+        }
+        else if (error instanceof Error) {
+            res.status(500).json({ error: error.message });
+        }
+        else {
+            res.status(500).json({ error: 'Terjadi kesalahan yang tidak diketahui' });
+        }
     }
 };
 exports.verifyCode = verifyCode;
-// Kirim ulang kode verifikasi
 const resendCode = async (req, res) => {
     try {
-        const { email } = auth_validation_1.resendCodeSchema.parse(req.body);
-        await AuthService.resendVerificationCode(email);
-        res.status(200).json({ message: 'Kode verifikasi berhasil dikirim ulang' });
+        // Validasi input
+        const validatedData = auth_validation_1.resendCodeSchema.parse(req.body);
+        const { email } = validatedData;
+        // Panggil service untuk mengirim ulang kode
+        await (0, auth_service_1.resendVerificationCode)(email);
+        res.status(200).json({ message: 'Kode verifikasi baru telah dikirimkan ke email.' });
     }
-    catch (err) {
-        handleError(err, res);
+    catch (error) {
+        if (error instanceof zod_1.ZodError) {
+            res.status(400).json({ error: error.errors });
+        }
+        else if (error instanceof Error) {
+            res.status(500).json({ error: error.message });
+        }
+        else {
+            res.status(500).json({ error: 'Terjadi kesalahan yang tidak diketahui' });
+        }
     }
 };
 exports.resendCode = resendCode;
 const login = async (req, res) => {
     try {
-        const { email, password } = auth_validation_1.loginSchema.parse(req.body);
-        const token = await AuthService.loginUser(email, password);
-        res.status(200).json({ message: 'Login berhasil', token });
+        // Validasi input
+        const validatedData = auth_validation_1.loginSchema.parse(req.body);
+        const { email, password } = validatedData;
+        // Panggil service untuk login dan mendapatkan access token serta refresh token
+        const { accessToken, refreshToken } = await (0, auth_service_1.loginUser)(email, password);
+        res.status(200).json({ message: 'Login berhasil', accessToken, refreshToken });
     }
-    catch (err) {
-        handleError(err, res);
+    catch (error) {
+        if (error instanceof zod_1.ZodError) {
+            res.status(400).json({ error: error.errors });
+        }
+        else if (error instanceof Error) {
+            res.status(500).json({ error: error.message });
+        }
+        else {
+            res.status(500).json({ error: 'Terjadi kesalahan yang tidak diketahui' });
+        }
     }
 };
 exports.login = login;
+// Endpoint untuk refresh token
+const refreshToken = async (req, res) => {
+    const refreshToken = req.body.refreshToken;
+    try {
+        // Panggil service untuk menangani refresh token
+        const { accessToken, refreshToken: newRefreshToken } = await (0, auth_service_1.handleRefreshToken)(refreshToken);
+        // Kirimkan kembali access token dan refresh token baru ke client
+        res.status(200).json({ accessToken, refreshToken: newRefreshToken });
+    }
+    catch (err) {
+        // Jika terjadi error, kirimkan response error dengan status 401
+        res.status(401).json({ error: err.message });
+    }
+};
+exports.refreshToken = refreshToken;

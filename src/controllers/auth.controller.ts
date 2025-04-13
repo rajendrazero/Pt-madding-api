@@ -1,59 +1,117 @@
-import { Request, Response, RequestHandler } from 'express';
-import * as AuthService from '../services/auth.service';
-import { registerSchema, verifyCodeSchema, resendCodeSchema, loginSchema} from '../validations/auth.validation';
-import { z } from 'zod';
+import { Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import { registerSchema, verifyCodeSchema, resendCodeSchema, loginSchema } from '../validations/auth.validation';
+import { registerUser,
+         verifyUserCode,  
+         resendVerificationCode, 
+         loginUser,
+         
+} from '../services/auth.service';
+import { ZodError } from 'zod'; // Pastikan ZodError diimpor dari Zod
+import { handleRefreshToken } from '../middlewares/auth.middleware.js'; 
 
-// Fungsi untuk menangani error
-const handleError = (err: any, res: Response): void => {
-  if (err instanceof z.ZodError) {
-    res.status(400).json({ error: err.errors.map(e => e.message) });
-  } else if (err instanceof Error) {
-    res.status(400).json({ error: err.message });
-  } else {
-    res.status(400).json({ error: 'Terjadi kesalahan tak dikenal' });
+
+export const register = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Validasi input
+    const validatedData = registerSchema.parse(req.body);
+
+    const { username, email, password } = validatedData;
+
+    // Panggil service untuk registrasi
+    await registerUser(username, email, password);
+
+    res.status(201).json({ message: 'Registrasi berhasil. Cek email untuk kode verifikasi.' });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      res.status(400).json({ error: error.errors });
+    } else if (error instanceof Error) {
+      res.status(500).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Terjadi kesalahan yang tidak diketahui' });
+    }
   }
 };
 
-// Register dan kirim kode verifikasi
-export const register: RequestHandler = async (req, res): Promise<void> => {
+export const verifyCode = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { username, email, password } = registerSchema.parse(req.body);
-    await AuthService.registerUser(username, email, password);
-    res.status(200).json({ message: 'Registrasi berhasil. Kode verifikasi telah dikirim ke email.' });
-  } catch (err) {
-    handleError(err, res);
+    // Validasi input
+    const validatedData = verifyCodeSchema.parse(req.body);
+
+    const { email, code } = validatedData;
+
+    // Panggil service untuk verifikasi kode
+    await verifyUserCode(email, code);
+
+    res.status(200).json({ message: 'Akun berhasil diverifikasi' });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      res.status(400).json({ error: error.errors });
+    } else if (error instanceof Error) {
+      res.status(500).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Terjadi kesalahan yang tidak diketahui' });
+    }
   }
 };
 
-// Verifikasi kode
-export const verifyCode: RequestHandler = async (req, res): Promise<void> => {
+export const resendCode = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, code } = verifyCodeSchema.parse(req.body);
-    await AuthService.verifyUserCode(email, code);
-    res.status(201).json({ message: 'Registrasi berhasil dan akun telah diverifikasi' });
-  } catch (err) {
-    handleError(err, res);
+    // Validasi input
+    const validatedData = resendCodeSchema.parse(req.body);
+
+    const { email } = validatedData;
+
+    // Panggil service untuk mengirim ulang kode
+    await resendVerificationCode(email);
+
+    res.status(200).json({ message: 'Kode verifikasi baru telah dikirimkan ke email.' });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      res.status(400).json({ error: error.errors });
+    } else if (error instanceof Error) {
+      res.status(500).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Terjadi kesalahan yang tidak diketahui' });
+    }
   }
 };
 
-// Kirim ulang kode verifikasi
-export const resendCode: RequestHandler = async (req, res): Promise<void> => {
+export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email } = resendCodeSchema.parse(req.body);
-    await AuthService.resendVerificationCode(email);
-    res.status(200).json({ message: 'Kode verifikasi berhasil dikirim ulang' });
-  } catch (err) {
-    handleError(err, res);
+    // Validasi input
+    const validatedData = loginSchema.parse(req.body);
+
+    const { email, password } = validatedData;
+
+    // Panggil service untuk login dan mendapatkan access token serta refresh token
+    const { accessToken, refreshToken } = await loginUser(email, password);
+
+    res.status(200).json({ message: 'Login berhasil', accessToken, refreshToken });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      res.status(400).json({ error: error.errors });
+    } else if (error instanceof Error) {
+      res.status(500).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Terjadi kesalahan yang tidak diketahui' });
+    }
   }
 };
 
 
-export const login: RequestHandler = async (req, res): Promise<void> => {
+// Endpoint untuk refresh token
+export const refreshToken = async (req: Request, res: Response): Promise<void> => {
+  const refreshToken = req.body.refreshToken;
+
   try {
-    const { email, password } = loginSchema.parse(req.body);
-    const token = await AuthService.loginUser(email, password);
-    res.status(200).json({ message: 'Login berhasil', token });
-  } catch (err) {
-    handleError(err, res);
+    // Panggil service untuk menangani refresh token
+    const { accessToken, refreshToken: newRefreshToken } = await handleRefreshToken(refreshToken);
+    
+    // Kirimkan kembali access token dan refresh token baru ke client
+    res.status(200).json({ accessToken, refreshToken: newRefreshToken });
+  } catch (err: any) {
+    // Jika terjadi error, kirimkan response error dengan status 401
+    res.status(401).json({ error: err.message });
   }
 };

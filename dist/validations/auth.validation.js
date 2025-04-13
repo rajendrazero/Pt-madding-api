@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.loginSchema = exports.resendCodeSchema = exports.verifyCodeSchema = exports.registerSchema = void 0;
-// src/validations/auth.validation.ts
 const zod_1 = require("zod");
 // Validasi untuk registrasi
 exports.registerSchema = zod_1.z.object({
@@ -18,6 +17,7 @@ exports.verifyCodeSchema = zod_1.z.object({
 exports.resendCodeSchema = zod_1.z.object({
     email: zod_1.z.string().email({ message: 'Email tidak valid' })
 });
+// Validasi untuk login
 exports.loginSchema = zod_1.z.object({
     email: zod_1.z.string().email({ message: 'Email tidak valid' }),
     password: zod_1.z.string().min(6, { message: 'Password wajib diisi' })

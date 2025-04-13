@@ -41,7 +41,6 @@ var bcryptjs_1 = require("bcryptjs");
 var uuid_1 = require("uuid");
 var mailer_1 = require("../utils/mailer");
 var db_1 = require("../utils/db");
-var jwt_1 = require("../utils/jwt");
 // Generate random 6-digit code
 var generateVerificationCode = function () {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -146,7 +145,7 @@ var cleanUnverified = function () { return __awaiter(void 0, void 0, Promise, fu
 }); };
 exports.cleanUnverified = cleanUnverified;
 var loginUser = function (email, password) { return __awaiter(void 0, void 0, Promise, function () {
-    var rows, user, valid, token;
+    var rows, user, valid;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, db_1.pool.query('SELECT * FROM users WHERE email = $1', [email])];
@@ -162,8 +161,8 @@ var loginUser = function (email, password) { return __awaiter(void 0, void 0, Pr
                 valid = _a.sent();
                 if (!valid)
                     throw new Error('Password salah');
-                token = (0, jwt_1.generateToken)(user.id, user.email);
-                return [2 /*return*/, token];
+                // Generate JWT token
+                return [2 /*return*/, generateToken(user.id, user.email, user.role)]; // Pastikan ini mengembalikan objek dengan accessToken dan refreshToken
         }
     });
 }); };

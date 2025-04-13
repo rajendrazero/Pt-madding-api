@@ -3,12 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.loginUser = exports.cleanUnverified = exports.resendVerificationCode = exports.verifyUserCode = exports.registerUser = void 0;
+exports.handleRefreshToken = exports.loginUser = exports.cleanUnverified = exports.resendVerificationCode = exports.verifyUserCode = exports.registerUser = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const uuid_1 = require("uuid");
 const mailer_1 = require("../utils/mailer");
 const db_1 = require("../utils/db");
 const jwt_1 = require("../utils/jwt");
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 // Generate random 6-digit code
 const generateVerificationCode = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -75,7 +76,21 @@ const loginUser = async (email, password) => {
     if (!valid)
         throw new Error('Password salah');
     // Generate JWT token
-    const token = (0, jwt_1.generateToken)(user.id, user.email);
-    return token;
+    return (0, jwt_1.generateToken)(user.id, user.email, user.role); // Pastikan ini mengembalikan objek dengan accessToken dan refreshToken
 };
 exports.loginUser = loginUser;
+const handleRefreshToken = async (refreshToken) => {
+    if (!refreshToken) {
+        throw new Error('Refresh token tidak ditemukan');
+    }
+    try {
+        // Verifikasi refresh token
+        const decoded = jsonwebtoken_1.default.verify(refreshToken, process.env.JWT_SECRET);
+        // Generate access token baru dan refresh token baru
+        return (0, jwt_1.generateToken)(decoded.userId, decoded.email, decoded.role);
+    }
+    catch (err) {
+        throw new Error('Refresh token tidak valid atau sudah kadaluarsa');
+    }
+};
+exports.handleRefreshToken = handleRefreshToken;

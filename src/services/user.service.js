@@ -45,7 +45,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     return to.concat(ar || Array.prototype.slice.call(from));
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteOldSoftDeletedUsers = exports.recoverUserById = exports.getUsersWithFilterAndPagination = exports.softDeleteUserById = exports.updateUserById = exports.fetchAllUsers = void 0;
+exports.updateOwnProfileById = exports.deleteOldSoftDeletedUsers = exports.recoverUserById = exports.getUsersWithFilterAndPagination = exports.softDeleteUserById = exports.updateUserById = exports.fetchAllUsers = void 0;
 var db_1 = require("../utils/db");
 // Pool adalah koneksi ke PostgreSQL
 function fetchAllUsers() {
@@ -194,3 +194,38 @@ function deleteOldSoftDeletedUsers() {
     });
 }
 exports.deleteOldSoftDeletedUsers = deleteOldSoftDeletedUsers;
+function updateOwnProfileById(_a) {
+    var id = _a.id, username = _a.username, email = _a.email, password = _a.password;
+    return __awaiter(this, void 0, void 0, function () {
+        var fields, values, idx, query;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
+                case 0:
+                    fields = [];
+                    values = [];
+                    idx = 1;
+                    if (username) {
+                        fields.push("username = $".concat(idx++));
+                        values.push(username);
+                    }
+                    if (email) {
+                        fields.push("email = $".concat(idx++));
+                        values.push(email);
+                    }
+                    if (password) {
+                        fields.push("password = $".concat(idx++));
+                        values.push(password);
+                    }
+                    if (fields.length === 0)
+                        return [2 /*return*/];
+                    values.push(id);
+                    query = "\n    UPDATE users\n    SET ".concat(fields.join(', '), ", updated_at = NOW()\n    WHERE id = $").concat(idx, "\n  ");
+                    return [4 /*yield*/, db_1.pool.query(query, values)];
+                case 1:
+                    _b.sent();
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+exports.updateOwnProfileById = updateOwnProfileById;

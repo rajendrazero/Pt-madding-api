@@ -5,9 +5,14 @@ updateUserById,
 softDeleteUserById,
 getUsersWithFilterAndPagination,
 recoverUserById,
+updateOwnProfileById,
 } from '../services/user.service';
 import { v4 as uuidv4 } from 'uuid';
-import { createUserSchema, updateUserSchema } from
+import { 
+  createUserSchema, 
+  updateUserSchema,
+  updateOwnProfileSchema
+   } from
 '../validations/user.validation';
 import { z } from 'zod';
 import { pool } from '../utils/db'; 
@@ -44,19 +49,6 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
 };
 
 
-export const deleteUser: RequestHandler = async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    await softDeleteUserById(id);
-    res.status(200).json({ message: 'User berhasil dihapus (soft delete)' });
-  } catch (error) {
-    console.error('Gagal hapus user:', error);
-    res.status(500).json({ error: 'Gagal hapus user' });
-  }
-};
-
-
 export const getUsersPaginated: RequestHandler = async (req, res) => {
   try {
     const {
@@ -79,6 +71,26 @@ export const getUsersPaginated: RequestHandler = async (req, res) => {
   } catch (error) {
     console.error('Gagal filter + pagination:', error);
     res.status(500).json({ error: 'Terjadi kesalahan saat filter data user' });
+  }
+};
+
+
+// Hapus akun (soft delete) - untuk pengguna dan admin
+export const deleteUser: RequestHandler = async (req, res): Promise<void> => {
+  const userId = req.user?.userId; // ID pengguna yang sedang login
+  const targetUserId = req.params.id; // ID pengguna yang ingin dihapus
+
+  // Cek apakah role adalah admin atau jika pengguna adalah user biasa dan mencoba menghapus dirinya sendiri
+  if (req.user?.role === 'admin' || userId === targetUserId) {
+    try {
+      await softDeleteUserById(targetUserId); // Menghapus akun dengan soft delete
+      res.status(200).json({ message: 'User berhasil dihapus (soft delete)' });
+    } catch (error) {
+      console.error('Gagal hapus user:', error);
+      res.status(500).json({ error: 'Gagal hapus user' });
+    }
+  } else {
+    res.status(403).json({ error: 'Forbidden: hanya admin yang bisa menghapus pengguna lain' });
   }
 };
 
@@ -157,5 +169,28 @@ export const getDeletedUsers: RequestHandler = async (req, res): Promise<void> =
   } catch (error) {
     console.error('Gagal ambil user terhapus:', error);
     res.status(500).json({ error: 'Terjadi kesalahan saat ambil user terhapus' });
+  }
+};
+
+
+export const updateOwnProfile: RequestHandler = async (req, res): Promise<void> => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    res.status(401).json({ error: 'Unauthorized: user ID not found' });
+    return;
+  }
+
+  try {
+    const parsed = updateOwnProfileSchema.parse(req.body);
+    await updateOwnProfileById({ id: userId, ...parsed });
+    res.status(200).json({ message: 'Profil berhasil diperbarui' });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: error.errors.map(e => e.message) });
+      return;
+    }
+    console.error('Gagal update profil:', error);
+    res.status(500).json({ error: 'Gagal update profil' });
   }
 };

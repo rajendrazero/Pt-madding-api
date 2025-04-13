@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { sendEmail } from '../utils/mailer';
 import { pool } from '../utils/db';
-import { generateToken } from '../utils/jwt'; 
+
 
 // Generate random 6-digit code
 const generateVerificationCode = (): string => {
@@ -68,7 +68,8 @@ export const cleanUnverified = async (): Promise<void> => {
   `);
 };
 
-export const loginUser = async (email: string, password: string): Promise<string> => {
+
+export const loginUser = async (email: string, password: string): Promise<{ accessToken: string, refreshToken: string }> => {
   const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
   if (!rows.length) throw new Error('Email tidak ditemukan');
 
@@ -79,7 +80,5 @@ export const loginUser = async (email: string, password: string): Promise<string
   if (!valid) throw new Error('Password salah');
 
   // Generate JWT token
-  const token = generateToken(user.id, user.email);
-
-  return token;
+  return generateToken(user.id, user.email, user.role); // Pastikan ini mengembalikan objek dengan accessToken dan refreshToken
 };

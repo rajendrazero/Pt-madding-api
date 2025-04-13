@@ -36,82 +36,101 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.login = exports.resendCode = exports.verifyCode = exports.register = void 0;
-var AuthService = require("../services/auth.service");
+exports.refreshToken = exports.login = exports.resendCode = exports.verifyCode = exports.register = void 0;
 var auth_validation_1 = require("../validations/auth.validation");
-var zod_1 = require("zod");
-// Fungsi untuk menangani error
-var handleError = function (err, res) {
-    if (err instanceof zod_1.z.ZodError) {
-        res.status(400).json({ error: err.errors.map(function (e) { return e.message; }) });
-    }
-    else if (err instanceof Error) {
-        res.status(400).json({ error: err.message });
-    }
-    else {
-        res.status(400).json({ error: 'Terjadi kesalahan tak dikenal' });
-    }
-};
-// Register dan kirim kode verifikasi
+var auth_service_1 = require("../services/auth.service");
+var zod_1 = require("zod"); // Pastikan ZodError diimpor dari Zod
+var auth_middleware_js_1 = require("../middlewares/auth.middleware.js");
 var register = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var _a, username, email, password, err_1;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
+    var validatedData, username, email, password, error_1;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
             case 0:
-                _b.trys.push([0, 2, , 3]);
-                _a = auth_validation_1.registerSchema.parse(req.body), username = _a.username, email = _a.email, password = _a.password;
-                return [4 /*yield*/, AuthService.registerUser(username, email, password)];
+                _a.trys.push([0, 2, , 3]);
+                validatedData = auth_validation_1.registerSchema.parse(req.body);
+                username = validatedData.username, email = validatedData.email, password = validatedData.password;
+                // Panggil service untuk registrasi
+                return [4 /*yield*/, (0, auth_service_1.registerUser)(username, email, password)];
             case 1:
-                _b.sent();
-                res.status(200).json({ message: 'Registrasi berhasil. Kode verifikasi telah dikirim ke email.' });
+                // Panggil service untuk registrasi
+                _a.sent();
+                res.status(201).json({ message: 'Registrasi berhasil. Cek email untuk kode verifikasi.' });
                 return [3 /*break*/, 3];
             case 2:
-                err_1 = _b.sent();
-                handleError(err_1, res);
+                error_1 = _a.sent();
+                if (error_1 instanceof zod_1.ZodError) {
+                    res.status(400).json({ error: error_1.errors });
+                }
+                else if (error_1 instanceof Error) {
+                    res.status(500).json({ error: error_1.message });
+                }
+                else {
+                    res.status(500).json({ error: 'Terjadi kesalahan yang tidak diketahui' });
+                }
                 return [3 /*break*/, 3];
             case 3: return [2 /*return*/];
         }
     });
 }); };
 exports.register = register;
-// Verifikasi kode
 var verifyCode = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var _a, email, code, err_2;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
+    var validatedData, email, code, error_2;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
             case 0:
-                _b.trys.push([0, 2, , 3]);
-                _a = auth_validation_1.verifyCodeSchema.parse(req.body), email = _a.email, code = _a.code;
-                return [4 /*yield*/, AuthService.verifyUserCode(email, code)];
+                _a.trys.push([0, 2, , 3]);
+                validatedData = auth_validation_1.verifyCodeSchema.parse(req.body);
+                email = validatedData.email, code = validatedData.code;
+                // Panggil service untuk verifikasi kode
+                return [4 /*yield*/, (0, auth_service_1.verifyUserCode)(email, code)];
             case 1:
-                _b.sent();
-                res.status(201).json({ message: 'Registrasi berhasil dan akun telah diverifikasi' });
+                // Panggil service untuk verifikasi kode
+                _a.sent();
+                res.status(200).json({ message: 'Akun berhasil diverifikasi' });
                 return [3 /*break*/, 3];
             case 2:
-                err_2 = _b.sent();
-                handleError(err_2, res);
+                error_2 = _a.sent();
+                if (error_2 instanceof zod_1.ZodError) {
+                    res.status(400).json({ error: error_2.errors });
+                }
+                else if (error_2 instanceof Error) {
+                    res.status(500).json({ error: error_2.message });
+                }
+                else {
+                    res.status(500).json({ error: 'Terjadi kesalahan yang tidak diketahui' });
+                }
                 return [3 /*break*/, 3];
             case 3: return [2 /*return*/];
         }
     });
 }); };
 exports.verifyCode = verifyCode;
-// Kirim ulang kode verifikasi
 var resendCode = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var email, err_3;
+    var validatedData, email, error_3;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 _a.trys.push([0, 2, , 3]);
-                email = auth_validation_1.resendCodeSchema.parse(req.body).email;
-                return [4 /*yield*/, AuthService.resendVerificationCode(email)];
+                validatedData = auth_validation_1.resendCodeSchema.parse(req.body);
+                email = validatedData.email;
+                // Panggil service untuk mengirim ulang kode
+                return [4 /*yield*/, (0, auth_service_1.resendVerificationCode)(email)];
             case 1:
+                // Panggil service untuk mengirim ulang kode
                 _a.sent();
-                res.status(200).json({ message: 'Kode verifikasi berhasil dikirim ulang' });
+                res.status(200).json({ message: 'Kode verifikasi baru telah dikirimkan ke email.' });
                 return [3 /*break*/, 3];
             case 2:
-                err_3 = _a.sent();
-                handleError(err_3, res);
+                error_3 = _a.sent();
+                if (error_3 instanceof zod_1.ZodError) {
+                    res.status(400).json({ error: error_3.errors });
+                }
+                else if (error_3 instanceof Error) {
+                    res.status(500).json({ error: error_3.message });
+                }
+                else {
+                    res.status(500).json({ error: 'Terjadi kesalahan yang tidak diketahui' });
+                }
                 return [3 /*break*/, 3];
             case 3: return [2 /*return*/];
         }
@@ -119,23 +138,58 @@ var resendCode = function (req, res) { return __awaiter(void 0, void 0, Promise,
 }); };
 exports.resendCode = resendCode;
 var login = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var _a, email, password, token, err_4;
+    var validatedData, email, password, _a, accessToken, refreshToken_1, error_4;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
                 _b.trys.push([0, 2, , 3]);
-                _a = auth_validation_1.loginSchema.parse(req.body), email = _a.email, password = _a.password;
-                return [4 /*yield*/, AuthService.loginUser(email, password)];
+                validatedData = auth_validation_1.loginSchema.parse(req.body);
+                email = validatedData.email, password = validatedData.password;
+                return [4 /*yield*/, (0, auth_service_1.loginUser)(email, password)];
             case 1:
-                token = _b.sent();
-                res.status(200).json({ message: 'Login berhasil', token: token });
+                _a = _b.sent(), accessToken = _a.accessToken, refreshToken_1 = _a.refreshToken;
+                res.status(200).json({ message: 'Login berhasil', accessToken: accessToken, refreshToken: refreshToken_1 });
                 return [3 /*break*/, 3];
             case 2:
-                err_4 = _b.sent();
-                handleError(err_4, res);
+                error_4 = _b.sent();
+                if (error_4 instanceof zod_1.ZodError) {
+                    res.status(400).json({ error: error_4.errors });
+                }
+                else if (error_4 instanceof Error) {
+                    res.status(500).json({ error: error_4.message });
+                }
+                else {
+                    res.status(500).json({ error: 'Terjadi kesalahan yang tidak diketahui' });
+                }
                 return [3 /*break*/, 3];
             case 3: return [2 /*return*/];
         }
     });
 }); };
 exports.login = login;
+// Endpoint untuk refresh token
+var refreshToken = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
+    var refreshToken, _a, accessToken, newRefreshToken, err_1;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                refreshToken = req.body.refreshToken;
+                _b.label = 1;
+            case 1:
+                _b.trys.push([1, 3, , 4]);
+                return [4 /*yield*/, (0, auth_middleware_js_1.handleRefreshToken)(refreshToken)];
+            case 2:
+                _a = _b.sent(), accessToken = _a.accessToken, newRefreshToken = _a.refreshToken;
+                // Kirimkan kembali access token dan refresh token baru ke client
+                res.status(200).json({ accessToken: accessToken, refreshToken: newRefreshToken });
+                return [3 /*break*/, 4];
+            case 3:
+                err_1 = _b.sent();
+                // Jika terjadi error, kirimkan response error dengan status 401
+                res.status(401).json({ error: err_1.message });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); };
+exports.refreshToken = refreshToken;

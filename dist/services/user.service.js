@@ -6,6 +6,7 @@ exports.softDeleteUserById = softDeleteUserById;
 exports.getUsersWithFilterAndPagination = getUsersWithFilterAndPagination;
 exports.recoverUserById = recoverUserById;
 exports.deleteOldSoftDeletedUsers = deleteOldSoftDeletedUsers;
+exports.updateOwnProfileById = updateOwnProfileById;
 const db_1 = require("../utils/db");
 // Pool adalah koneksi ke PostgreSQL
 async function fetchAllUsers() {
@@ -98,4 +99,30 @@ async function deleteOldSoftDeletedUsers() {
     catch (error) {
         console.error('Error saat menghapus pengguna:', error);
     }
+}
+async function updateOwnProfileById({ id, username, email, password }) {
+    const fields = [];
+    const values = [];
+    let idx = 1;
+    if (username) {
+        fields.push(`username = $${idx++}`);
+        values.push(username);
+    }
+    if (email) {
+        fields.push(`email = $${idx++}`);
+        values.push(email);
+    }
+    if (password) {
+        fields.push(`password = $${idx++}`);
+        values.push(password);
+    }
+    if (fields.length === 0)
+        return;
+    values.push(id);
+    const query = `
+    UPDATE users
+    SET ${fields.join(', ')}, updated_at = NOW()
+    WHERE id = $${idx}
+  `;
+    await db_1.pool.query(query, values);
 }

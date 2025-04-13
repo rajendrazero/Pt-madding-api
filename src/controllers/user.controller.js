@@ -56,7 +56,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     return to.concat(ar || Array.prototype.slice.call(from));
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getDeletedUsers = exports.recoverUser = exports.getUsersPaginated = exports.deleteUser = exports.updateUser = exports.getAllUsers = void 0;
+exports.updateOwnProfile = exports.getDeletedUsers = exports.recoverUser = exports.deleteUser = exports.getUsersPaginated = exports.updateUser = exports.getAllUsers = void 0;
 var user_service_1 = require("../services/user.service");
 var user_validation_1 = require("../validations/user.validation");
 var zod_1 = require("zod");
@@ -114,32 +114,8 @@ var updateUser = function (req, res) { return __awaiter(void 0, void 0, Promise,
     });
 }); };
 exports.updateUser = updateUser;
-var deleteUser = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var id, error_3;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                id = req.params.id;
-                _a.label = 1;
-            case 1:
-                _a.trys.push([1, 3, , 4]);
-                return [4 /*yield*/, (0, user_service_1.softDeleteUserById)(id)];
-            case 2:
-                _a.sent();
-                res.status(200).json({ message: 'User berhasil dihapus (soft delete)' });
-                return [3 /*break*/, 4];
-            case 3:
-                error_3 = _a.sent();
-                console.error('Gagal hapus user:', error_3);
-                res.status(500).json({ error: 'Gagal hapus user' });
-                return [3 /*break*/, 4];
-            case 4: return [2 /*return*/];
-        }
-    });
-}); };
-exports.deleteUser = deleteUser;
 var getUsersPaginated = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a, keyword, role, is_verified, _b, page, _c, limit, data, error_4;
+    var _a, keyword, role, is_verified, _b, page, _c, limit, data, error_3;
     return __generator(this, function (_d) {
         switch (_d.label) {
             case 0:
@@ -157,8 +133,8 @@ var getUsersPaginated = function (req, res) { return __awaiter(void 0, void 0, v
                 res.status(200).json(data);
                 return [3 /*break*/, 3];
             case 2:
-                error_4 = _d.sent();
-                console.error('Gagal filter + pagination:', error_4);
+                error_3 = _d.sent();
+                console.error('Gagal filter + pagination:', error_3);
                 res.status(500).json({ error: 'Terjadi kesalahan saat filter data user' });
                 return [3 /*break*/, 3];
             case 3: return [2 /*return*/];
@@ -166,6 +142,38 @@ var getUsersPaginated = function (req, res) { return __awaiter(void 0, void 0, v
     });
 }); };
 exports.getUsersPaginated = getUsersPaginated;
+// Hapus akun (soft delete) - untuk pengguna dan admin
+var deleteUser = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
+    var userId, targetUserId, error_4;
+    var _a, _b;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
+            case 0:
+                userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+                targetUserId = req.params.id;
+                if (!(((_b = req.user) === null || _b === void 0 ? void 0 : _b.role) === 'admin' || userId === targetUserId)) return [3 /*break*/, 5];
+                _c.label = 1;
+            case 1:
+                _c.trys.push([1, 3, , 4]);
+                return [4 /*yield*/, (0, user_service_1.softDeleteUserById)(targetUserId)];
+            case 2:
+                _c.sent(); // Menghapus akun dengan soft delete
+                res.status(200).json({ message: 'User berhasil dihapus (soft delete)' });
+                return [3 /*break*/, 4];
+            case 3:
+                error_4 = _c.sent();
+                console.error('Gagal hapus user:', error_4);
+                res.status(500).json({ error: 'Gagal hapus user' });
+                return [3 /*break*/, 4];
+            case 4: return [3 /*break*/, 6];
+            case 5:
+                res.status(403).json({ error: 'Forbidden: hanya admin yang bisa menghapus pengguna lain' });
+                _c.label = 6;
+            case 6: return [2 /*return*/];
+        }
+    });
+}); };
+exports.deleteUser = deleteUser;
 var recoverUser = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
     var id, error_5;
     return __generator(this, function (_a) {
@@ -245,3 +253,37 @@ var getDeletedUsers = function (req, res) { return __awaiter(void 0, void 0, Pro
     });
 }); };
 exports.getDeletedUsers = getDeletedUsers;
+var updateOwnProfile = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
+    var userId, parsed, error_7;
+    var _a;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+                if (!userId) {
+                    res.status(401).json({ error: 'Unauthorized: user ID not found' });
+                    return [2 /*return*/];
+                }
+                _b.label = 1;
+            case 1:
+                _b.trys.push([1, 3, , 4]);
+                parsed = user_validation_1.updateOwnProfileSchema.parse(req.body);
+                return [4 /*yield*/, (0, user_service_1.updateOwnProfileById)(__assign({ id: userId }, parsed))];
+            case 2:
+                _b.sent();
+                res.status(200).json({ message: 'Profil berhasil diperbarui' });
+                return [3 /*break*/, 4];
+            case 3:
+                error_7 = _b.sent();
+                if (error_7 instanceof zod_1.z.ZodError) {
+                    res.status(400).json({ error: error_7.errors.map(function (e) { return e.message; }) });
+                    return [2 /*return*/];
+                }
+                console.error('Gagal update profil:', error_7);
+                res.status(500).json({ error: 'Gagal update profil' });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); };
+exports.updateOwnProfile = updateOwnProfile;

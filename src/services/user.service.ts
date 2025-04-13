@@ -137,3 +137,46 @@ export async function deleteOldSoftDeletedUsers(): Promise<void> {
     console.error('Error saat menghapus pengguna:', error);
   }
 }
+
+
+export async function updateOwnProfileById({
+  id,
+  username,
+  email,
+  password
+}: {
+  id: string;
+  username?: string;
+  email?: string;
+  password?: string;
+}) {
+  const fields = [];
+  const values = [];
+  let idx = 1;
+
+  if (username) {
+    fields.push(`username = $${idx++}`);
+    values.push(username);
+  }
+
+  if (email) {
+    fields.push(`email = $${idx++}`);
+    values.push(email);
+  }
+
+  if (password) {
+    fields.push(`password = $${idx++}`);
+    values.push(password);
+  }
+
+  if (fields.length === 0) return;
+
+  values.push(id);
+  const query = `
+    UPDATE users
+    SET ${fields.join(', ')}, updated_at = NOW()
+    WHERE id = $${idx}
+  `;
+
+  await pool.query(query, values);
+}

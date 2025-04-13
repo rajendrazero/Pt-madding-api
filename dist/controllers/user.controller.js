@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getDeletedUsers = exports.recoverUser = exports.getUsersPaginated = exports.deleteUser = exports.updateUser = exports.getAllUsers = void 0;
+exports.updateOwnProfile = exports.getDeletedUsers = exports.recoverUser = exports.deleteUser = exports.getUsersPaginated = exports.updateUser = exports.getAllUsers = void 0;
 const user_service_1 = require("../services/user.service");
 const user_validation_1 = require("../validations/user.validation");
 const zod_1 = require("zod");
@@ -36,18 +36,6 @@ const updateUser = async (req, res) => {
     }
 };
 exports.updateUser = updateUser;
-const deleteUser = async (req, res) => {
-    const { id } = req.params;
-    try {
-        await (0, user_service_1.softDeleteUserById)(id);
-        res.status(200).json({ message: 'User berhasil dihapus (soft delete)' });
-    }
-    catch (error) {
-        console.error('Gagal hapus user:', error);
-        res.status(500).json({ error: 'Gagal hapus user' });
-    }
-};
-exports.deleteUser = deleteUser;
 const getUsersPaginated = async (req, res) => {
     try {
         const { keyword, role, is_verified, page = '1', limit = '10' } = req.query;
@@ -66,6 +54,26 @@ const getUsersPaginated = async (req, res) => {
     }
 };
 exports.getUsersPaginated = getUsersPaginated;
+// Hapus akun (soft delete) - untuk pengguna dan admin
+const deleteUser = async (req, res) => {
+    const userId = req.user?.userId; // ID pengguna yang sedang login
+    const targetUserId = req.params.id; // ID pengguna yang ingin dihapus
+    // Cek apakah role adalah admin atau jika pengguna adalah user biasa dan mencoba menghapus dirinya sendiri
+    if (req.user?.role === 'admin' || userId === targetUserId) {
+        try {
+            await (0, user_service_1.softDeleteUserById)(targetUserId); // Menghapus akun dengan soft delete
+            res.status(200).json({ message: 'User berhasil dihapus (soft delete)' });
+        }
+        catch (error) {
+            console.error('Gagal hapus user:', error);
+            res.status(500).json({ error: 'Gagal hapus user' });
+        }
+    }
+    else {
+        res.status(403).json({ error: 'Forbidden: hanya admin yang bisa menghapus pengguna lain' });
+    }
+};
+exports.deleteUser = deleteUser;
 const recoverUser = async (req, res) => {
     const { id } = req.params;
     try {
@@ -127,3 +135,24 @@ const getDeletedUsers = async (req, res) => {
     }
 };
 exports.getDeletedUsers = getDeletedUsers;
+const updateOwnProfile = async (req, res) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+        res.status(401).json({ error: 'Unauthorized: user ID not found' });
+        return;
+    }
+    try {
+        const parsed = user_validation_1.updateOwnProfileSchema.parse(req.body);
+        await (0, user_service_1.updateOwnProfileById)({ id: userId, ...parsed });
+        res.status(200).json({ message: 'Profil berhasil diperbarui' });
+    }
+    catch (error) {
+        if (error instanceof zod_1.z.ZodError) {
+            res.status(400).json({ error: error.errors.map(e => e.message) });
+            return;
+        }
+        console.error('Gagal update profil:', error);
+        res.status(500).json({ error: 'Gagal update profil' });
+    }
+};
+exports.updateOwnProfile = updateOwnProfile;
