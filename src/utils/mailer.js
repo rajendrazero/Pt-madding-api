@@ -55,29 +55,38 @@ exports.transporter = nodemailer_1.default.createTransport({
 });
 // Fungsi untuk mengirim email
 var sendEmail = function (to, subject, text) { return __awaiter(void 0, void 0, void 0, function () {
-    var info, error_1;
+    var textContent, htmlContent, info, error_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                _a.trys.push([0, 2, , 3]);
+                textContent = "\n    Halo,\n\n    Berikut adalah kode Anda:\n\n    ".concat(text, "\n\n    Jika Anda tidak merasa meminta kode ini, abaikan saja email ini.\n\n    Salam,\n    Tim Litera9\n  ");
+                htmlContent = "\n    <p>Halo,</p>\n    <p>Berikut adalah kode Anda:</p>\n    <pre style=\"background:#f4f4f4;padding:10px;border-radius:5px;font-size:16px;border:1px solid #ddd;\">".concat(text, "</pre>\n    <p>Silakan salin dan tempel kode ini ke halaman verifikasi Litera9.</p>\n    <p>Jika Anda tidak merasa meminta kode ini, abaikan saja email ini.</p>\n    <p>Salam,<br>Tim Litera9</p>\n  ");
+                _a.label = 1;
+            case 1:
+                _a.trys.push([1, 3, , 4]);
                 return [4 /*yield*/, exports.transporter.sendMail({
-                        from: process.env.EMAIL_USER,
+                        from: "\"Litera9\" <".concat(process.env.EMAIL_USER, ">"),
                         to: to,
                         subject: subject,
-                        text: text,
+                        text: textContent,
+                        html: htmlContent,
+                        headers: {
+                            'X-Priority': '1 (Highest)',
+                            'X-Mailer': 'Nodemailer',
+                        },
                     })];
-            case 1:
+            case 2:
                 info = _a.sent();
                 console.log('Email berhasil dikirim:', info.response);
-                return [3 /*break*/, 3];
-            case 2:
+                return [3 /*break*/, 4];
+            case 3:
                 error_1 = _a.sent();
                 console.error('Gagal mengirim email:', error_1);
                 console.log('ERROR MESSAGE:', error_1.message);
                 console.log('ERROR RESPONSE:', error_1.response);
                 console.log('ERROR CODE:', error_1.code);
                 throw new Error('Gagal mengirim email');
-            case 3: return [2 /*return*/];
+            case 4: return [2 /*return*/];
         }
     });
 }); };
