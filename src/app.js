@@ -9,7 +9,7 @@ var app = (0, express_1.default)();
 // Deklarasikan allowedOrigins SEBELUM dipakai
 var allowedOrigins = [
     'http://localhost:5173',
-    'https://pt-madding-web.vercel.app'
+    'https://litera9.vercel.app'
 ];
 // CORS setup
 var corsOptions = {
