@@ -2,30 +2,38 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var express_1 = require("express");
 var cors_1 = require("cors");
-var auth_router_js_1 = require("./routes/auth.router.js");
-var admin_router_js_1 = require("./routes/admin.router.js");
-var user_router_js_1 = require("./routes/user.router.js");
+var auth_router_1 = require("./routes/auth.router");
+var admin_router_1 = require("./routes/admin.router");
+var user_router_1 = require("./routes/user.router");
 var app = (0, express_1.default)();
+// CORS configuration
+var allowedOrigins = [
+    'http://localhost:5173',
+    'https://pt-madding-api-production.up.railway.app',
+];
+app.use((0, cors_1.default)({
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        }
+        else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+}));
+// Handle preflight requests
+app.options('*', (0, cors_1.default)());
 // Middleware
 app.use(express_1.default.json());
-app.use((0, cors_1.default)({
-    origin: 'http://localhost:5173',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-}));
-app.options('*', (0, cors_1.default)({
-    origin: 'http://localhost:5173',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-}));
-// Tes endpoint
+// Test endpoint
 app.get('/', function (req, res) {
     res.send('Server berjalan!');
 });
-// Routing
-app.use('/api/auth', auth_router_js_1.default);
-app.use('/api/admin', admin_router_js_1.default);
-app.use('/api/user', user_router_js_1.default);
+// Routes
+app.use('/api/auth', auth_router_1.default);
+app.use('/api/admin', admin_router_1.default);
+app.use('/api/user', user_router_1.default);
 exports.default = app;
