@@ -20,7 +20,7 @@ router.get('/', checkRole('user'), (req, res) => {
   res.status(200).json({ message: 'Profile user', user });
 });
 
-router.get('/', getAllUsers);
+router.get('/data', getAllUsers);
 
 // Route untuk update profile user (hanya bisa diakses oleh user itu sendiri)
 router.put('/profile', checkRole('user'), updateOwnProfile);
