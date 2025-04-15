@@ -6,8 +6,12 @@ var zod_1 = require("zod");
 exports.updateUserSchema = zod_1.z.object({
     username: zod_1.z.string().min(3).optional(),
     email: zod_1.z.string().email().optional(),
-    password: zod_1.z.string().min(6).optional()
-}).refine(function (data) { return Object.keys(data).length > 0; }, {
+    password: zod_1.z.string().min(6).optional(),
+    photo_url: zod_1.z.string().url().optional(),
+    gender: zod_1.z.enum(['male', 'female', 'other']).optional(),
+    class: zod_1.z.string().max(50).optional(),
+    description: zod_1.z.string().optional(),
+}).refine(function (data) { return Object.keys(data).some(function (key) { return data[key] !== undefined; }); }, {
     message: "Minimal satu field harus diisi"
 });
 // Validasi untuk membuat user baru + kode verifikasi

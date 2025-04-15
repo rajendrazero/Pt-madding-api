@@ -6,6 +6,7 @@ softDeleteUserById,
 getUsersWithFilterAndPagination,
 recoverUserById,
 updateOwnProfileById,
+getDeletedUsersService
 } from '../services/user.service';
 import { v4 as uuidv4 } from 'uuid';
 import { 
@@ -28,23 +29,6 @@ export const getAllUsers: RequestHandler = async (req, res) => {
   } catch (error) {
     console.error('Gagal mengambil user:', error); // Logging jika error
     res.status(500).json({ error: 'Internal Server Error' }); // Kirim response 500
-  }
-};
-
-export const updateUser = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
-
-  try {
-    const parsed = updateUserSchema.parse(req.body); // Validasi update
-    await updateUserById({ id, ...parsed });
-    res.status(200).json({ message: 'User berhasil diupdate' });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: error.errors.map(e => e.message) });
-      return;
-    }
-    console.error('Gagal update user:', error);
-    res.status(500).json({ error: 'Gagal update user' });
   }
 };
 
@@ -71,6 +55,47 @@ export const getUsersPaginated: RequestHandler = async (req, res) => {
   } catch (error) {
     console.error('Gagal filter + pagination:', error);
     res.status(500).json({ error: 'Terjadi kesalahan saat filter data user' });
+  }
+};
+
+
+export const updateUser = async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  try {
+    const parsed = updateUserSchema.parse(req.body); // Validasi update
+    await updateUserById({ id, ...parsed });
+    res.status(200).json({ message: 'User berhasil diupdate' });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: error.errors.map(e => e.message) });
+      return;
+    }
+    console.error('Gagal update user:', error);
+    res.status(500).json({ error: 'Gagal update user' });
+  }
+};
+
+
+export const updateOwnProfile: RequestHandler = async (req, res): Promise<void> => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    res.status(401).json({ error: 'Unauthorized: user ID not found' });
+    return;
+  }
+
+  try {
+    const parsed = updateOwnProfileSchema.parse(req.body);
+    await updateOwnProfileById({ id: userId, ...parsed });
+    res.status(200).json({ message: 'Profil berhasil diperbarui' });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: error.errors.map(e => e.message) });
+      return;
+    }
+    console.error('Gagal update profil:', error);
+    res.status(500).json({ error: 'Gagal update profil' });
   }
 };
 
@@ -110,62 +135,8 @@ export const recoverUser: RequestHandler = async (req: Request, res: Response): 
 
 export const getDeletedUsers: RequestHandler = async (req, res): Promise<void> => {
   try {
-    const {
-      keyword,
-      role,
-      is_verified,
-      page = '1',
-      limit = '10'
-    } = req.query;
-
-    const pageNum = parseInt(page as string);
-    const limitNum = parseInt(limit as string);
-    const offset = (pageNum - 1) * limitNum;
-
-    const values: any[] = [];
-    const filters: string[] = ['is_deleted = true'];
-    let idx = 1;
-
-    if (keyword) {
-      filters.push(`(username ILIKE $${idx} OR email ILIKE $${idx})`);
-      values.push(`%${keyword}%`);
-      idx++;
-    }
-
-    if (role) {
-      filters.push(`role = $${idx}`);
-      values.push(role);
-      idx++;
-    }
-
-    if (typeof is_verified === 'boolean' || is_verified === 'true' || is_verified === 'false') {
-      filters.push(`is_verified = $${idx}`);
-      values.push(is_verified === 'true');
-      idx++;
-    }
-
-    const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
-
-    const countQuery = `SELECT COUNT(*) FROM users ${whereClause}`;
-    const countRes = await pool.query(countQuery, values);
-    const total = parseInt(countRes.rows[0].count, 10);
-
-    const dataQuery = `
-      SELECT id, username, email, role, is_verified, created_at
-      FROM users
-      ${whereClause}
-      ORDER BY created_at DESC
-      LIMIT $${idx} OFFSET $${idx + 1}
-    `;
-    const dataRes = await pool.query(dataQuery, [...values, limitNum, offset]);
-
-    res.status(200).json({
-      data: dataRes.rows,
-      total,
-      currentPage: pageNum,
-      totalPages: Math.ceil(total / limitNum),
-    });
-
+    const result = await getDeletedUsersService(req.query);
+    res.status(200).json(result);
   } catch (error) {
     console.error('Gagal ambil user terhapus:', error);
     res.status(500).json({ error: 'Terjadi kesalahan saat ambil user terhapus' });
@@ -173,24 +144,3 @@ export const getDeletedUsers: RequestHandler = async (req, res): Promise<void> =
 };
 
 
-export const updateOwnProfile: RequestHandler = async (req, res): Promise<void> => {
-  const userId = req.user?.userId;
-
-  if (!userId) {
-    res.status(401).json({ error: 'Unauthorized: user ID not found' });
-    return;
-  }
-
-  try {
-    const parsed = updateOwnProfileSchema.parse(req.body);
-    await updateOwnProfileById({ id: userId, ...parsed });
-    res.status(200).json({ message: 'Profil berhasil diperbarui' });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: error.errors.map(e => e.message) });
-      return;
-    }
-    console.error('Gagal update profil:', error);
-    res.status(500).json({ error: 'Gagal update profil' });
-  }
-};

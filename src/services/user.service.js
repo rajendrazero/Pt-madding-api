@@ -45,7 +45,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     return to.concat(ar || Array.prototype.slice.call(from));
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateOwnProfileById = exports.deleteOldSoftDeletedUsers = exports.recoverUserById = exports.getUsersWithFilterAndPagination = exports.softDeleteUserById = exports.updateUserById = exports.fetchAllUsers = void 0;
+exports.getDeletedUsersService = exports.deleteOldSoftDeletedUsers = exports.recoverUserById = exports.softDeleteUserById = exports.updateOwnProfileById = exports.updateUserById = exports.getUsersWithFilterAndPagination = exports.fetchAllUsers = void 0;
 var db_1 = require("../utils/db");
 // Pool adalah koneksi ke PostgreSQL
 function fetchAllUsers() {
@@ -53,7 +53,7 @@ function fetchAllUsers() {
         var res;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, db_1.pool.query("\n    SELECT id, username, email, role, is_verified, created_at\n    FROM users\n    WHERE is_deleted = false AND is_verified = true\n  ")];
+                case 0: return [4 /*yield*/, db_1.pool.query("\n    SELECT id, username, email, role, is_verified, created_at,\n           photo_url, gender, class, description\n    FROM users\n    WHERE is_deleted = false AND is_verified = true\n  ")];
                 case 1:
                     res = _a.sent();
                     return [2 /*return*/, res.rows];
@@ -62,54 +62,6 @@ function fetchAllUsers() {
     });
 }
 exports.fetchAllUsers = fetchAllUsers;
-function updateUserById(_a) {
-    var id = _a.id, username = _a.username, email = _a.email, password = _a.password;
-    return __awaiter(this, void 0, void 0, function () {
-        var fields, values, idx, query;
-        return __generator(this, function (_b) {
-            switch (_b.label) {
-                case 0:
-                    fields = [];
-                    values = [];
-                    idx = 1;
-                    if (username) {
-                        fields.push("username = $".concat(idx++));
-                        values.push(username);
-                    }
-                    if (email) {
-                        fields.push("email = $".concat(idx++));
-                        values.push(email);
-                    }
-                    if (password) {
-                        fields.push("password = $".concat(idx++));
-                        values.push(password);
-                    }
-                    if (fields.length === 0)
-                        return [2 /*return*/];
-                    values.push(id);
-                    query = "\n    UPDATE users\n    SET ".concat(fields.join(', '), "\n    WHERE id = $").concat(idx, " AND is_verified = true\n  ");
-                    return [4 /*yield*/, db_1.pool.query(query, values)];
-                case 1:
-                    _b.sent();
-                    return [2 /*return*/];
-            }
-        });
-    });
-}
-exports.updateUserById = updateUserById;
-function softDeleteUserById(id) {
-    return __awaiter(this, void 0, void 0, function () {
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, db_1.pool.query("UPDATE users SET is_deleted = true WHERE id = $1 AND is_verified = true", [id])];
-                case 1:
-                    _a.sent();
-                    return [2 /*return*/];
-            }
-        });
-    });
-}
-exports.softDeleteUserById = softDeleteUserById;
 function getUsersWithFilterAndPagination(_a) {
     var keyword = _a.keyword, role = _a.role, is_verified = _a.is_verified, _b = _a.page, page = _b === void 0 ? 1 : _b, _c = _a.limit, limit = _c === void 0 ? 10 : _c;
     return __awaiter(this, void 0, void 0, function () {
@@ -132,7 +84,7 @@ function getUsersWithFilterAndPagination(_a) {
                     }
                     // Selalu filter hanya user yang terverifikasi, default true
                     filters.push("is_verified = $".concat(idx));
-                    values.push(is_verified !== null && is_verified !== void 0 ? is_verified : true); // kalau undefined, jadi true
+                    values.push(is_verified !== null && is_verified !== void 0 ? is_verified : true);
                     idx++;
                     whereClause = filters.length > 0 ? "WHERE ".concat(filters.join(' AND ')) : '';
                     offset = (page - 1) * limit;
@@ -141,7 +93,7 @@ function getUsersWithFilterAndPagination(_a) {
                 case 1:
                     countRes = _d.sent();
                     total = parseInt(countRes.rows[0].count, 10);
-                    dataQuery = "\n    SELECT id, username, email, role, is_verified, created_at\n    FROM users\n    ".concat(whereClause, "\n    ORDER BY created_at DESC\n    LIMIT $").concat(idx, " OFFSET $").concat(idx + 1, "\n  ");
+                    dataQuery = "\n    SELECT id, username, email, role, is_verified, created_at,\n           photo_url, gender, class, description\n    FROM users\n    ".concat(whereClause, "\n    ORDER BY created_at DESC\n    LIMIT $").concat(idx, " OFFSET $").concat(idx + 1, "\n  ");
                     return [4 /*yield*/, db_1.pool.query(dataQuery, __spreadArray(__spreadArray([], values, true), [limit, offset], false))];
                 case 2:
                     dataRes = _d.sent();
@@ -156,6 +108,123 @@ function getUsersWithFilterAndPagination(_a) {
     });
 }
 exports.getUsersWithFilterAndPagination = getUsersWithFilterAndPagination;
+function updateUserById(_a) {
+    var id = _a.id, username = _a.username, email = _a.email, password = _a.password, photo_url = _a.photo_url, gender = _a.gender, userClass = _a.class, // `class` adalah kata kunci di JavaScript, jadi gunakan `userClass`
+    description = _a.description;
+    return __awaiter(this, void 0, void 0, function () {
+        var fields, values, idx, query;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
+                case 0:
+                    fields = [];
+                    values = [];
+                    idx = 1;
+                    if (username) {
+                        fields.push("username = $".concat(idx++));
+                        values.push(username);
+                    }
+                    if (email) {
+                        fields.push("email = $".concat(idx++));
+                        values.push(email);
+                    }
+                    if (password) {
+                        fields.push("password = $".concat(idx++));
+                        values.push(password);
+                    }
+                    if (photo_url) {
+                        fields.push("photo_url = $".concat(idx++));
+                        values.push(photo_url);
+                    }
+                    if (gender) {
+                        fields.push("gender = $".concat(idx++));
+                        values.push(gender);
+                    }
+                    if (userClass) {
+                        fields.push("class = $".concat(idx++));
+                        values.push(userClass);
+                    }
+                    if (description) {
+                        fields.push("description = $".concat(idx++));
+                        values.push(description);
+                    }
+                    if (fields.length === 0)
+                        return [2 /*return*/];
+                    values.push(id);
+                    query = "\n    UPDATE users\n    SET ".concat(fields.join(', '), "\n    WHERE id = $").concat(idx, " AND is_verified = true\n  ");
+                    return [4 /*yield*/, db_1.pool.query(query, values)];
+                case 1:
+                    _b.sent();
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+exports.updateUserById = updateUserById;
+function updateOwnProfileById(_a) {
+    var id = _a.id, username = _a.username, email = _a.email, password = _a.password, photo_url = _a.photo_url, gender = _a.gender, userClass = _a.class, // Gunakan `userClass` untuk menghindari bentrok dengan kata kunci `class`
+    description = _a.description;
+    return __awaiter(this, void 0, void 0, function () {
+        var fields, values, idx, query;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
+                case 0:
+                    fields = [];
+                    values = [];
+                    idx = 1;
+                    if (username) {
+                        fields.push("username = $".concat(idx++));
+                        values.push(username);
+                    }
+                    if (email) {
+                        fields.push("email = $".concat(idx++));
+                        values.push(email);
+                    }
+                    if (password) {
+                        fields.push("password = $".concat(idx++));
+                        values.push(password);
+                    }
+                    if (photo_url) {
+                        fields.push("photo_url = $".concat(idx++));
+                        values.push(photo_url);
+                    }
+                    if (gender) {
+                        fields.push("gender = $".concat(idx++));
+                        values.push(gender);
+                    }
+                    if (userClass) {
+                        fields.push("class = $".concat(idx++));
+                        values.push(userClass);
+                    }
+                    if (description) {
+                        fields.push("description = $".concat(idx++));
+                        values.push(description);
+                    }
+                    if (fields.length === 0)
+                        return [2 /*return*/];
+                    values.push(id);
+                    query = "\n    UPDATE users\n    SET ".concat(fields.join(', '), ", updated_at = NOW()\n    WHERE id = $").concat(idx, "\n  ");
+                    return [4 /*yield*/, db_1.pool.query(query, values)];
+                case 1:
+                    _b.sent();
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+exports.updateOwnProfileById = updateOwnProfileById;
+function softDeleteUserById(id) {
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, db_1.pool.query("UPDATE users SET is_deleted = true WHERE id = $1 AND is_verified = true", [id])];
+                case 1:
+                    _a.sent();
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+exports.softDeleteUserById = softDeleteUserById;
 function recoverUserById(id) {
     return __awaiter(this, void 0, void 0, function () {
         return __generator(this, function (_a) {
@@ -194,38 +263,52 @@ function deleteOldSoftDeletedUsers() {
     });
 }
 exports.deleteOldSoftDeletedUsers = deleteOldSoftDeletedUsers;
-function updateOwnProfileById(_a) {
-    var id = _a.id, username = _a.username, email = _a.email, password = _a.password;
+function getDeletedUsersService(query) {
     return __awaiter(this, void 0, void 0, function () {
-        var fields, values, idx, query;
-        return __generator(this, function (_b) {
-            switch (_b.label) {
+        var keyword, role, is_verified, _a, page, _b, limit, pageNum, limitNum, offset, values, filters, idx, whereClause, countQuery, countRes, total, dataQuery, dataRes;
+        return __generator(this, function (_c) {
+            switch (_c.label) {
                 case 0:
-                    fields = [];
+                    keyword = query.keyword, role = query.role, is_verified = query.is_verified, _a = query.page, page = _a === void 0 ? '1' : _a, _b = query.limit, limit = _b === void 0 ? '10' : _b;
+                    pageNum = parseInt(page);
+                    limitNum = parseInt(limit);
+                    offset = (pageNum - 1) * limitNum;
                     values = [];
+                    filters = ['is_deleted = true'];
                     idx = 1;
-                    if (username) {
-                        fields.push("username = $".concat(idx++));
-                        values.push(username);
+                    if (keyword) {
+                        filters.push("(username ILIKE $".concat(idx, " OR email ILIKE $").concat(idx, ")"));
+                        values.push("%".concat(keyword, "%"));
+                        idx++;
                     }
-                    if (email) {
-                        fields.push("email = $".concat(idx++));
-                        values.push(email);
+                    if (role) {
+                        filters.push("role = $".concat(idx));
+                        values.push(role);
+                        idx++;
                     }
-                    if (password) {
-                        fields.push("password = $".concat(idx++));
-                        values.push(password);
+                    if (typeof is_verified === 'boolean' || is_verified === 'true' || is_verified === 'false') {
+                        filters.push("is_verified = $".concat(idx));
+                        values.push(is_verified === 'true');
+                        idx++;
                     }
-                    if (fields.length === 0)
-                        return [2 /*return*/];
-                    values.push(id);
-                    query = "\n    UPDATE users\n    SET ".concat(fields.join(', '), ", updated_at = NOW()\n    WHERE id = $").concat(idx, "\n  ");
-                    return [4 /*yield*/, db_1.pool.query(query, values)];
+                    whereClause = filters.length ? "WHERE ".concat(filters.join(' AND ')) : '';
+                    countQuery = "SELECT COUNT(*) FROM users ".concat(whereClause);
+                    return [4 /*yield*/, db_1.pool.query(countQuery, values)];
                 case 1:
-                    _b.sent();
-                    return [2 /*return*/];
+                    countRes = _c.sent();
+                    total = parseInt(countRes.rows[0].count, 10);
+                    dataQuery = "\n    SELECT id, username, email, role, is_verified, created_at,\n           photo_url, gender, class, description\n    FROM users\n    ".concat(whereClause, "\n    ORDER BY created_at DESC\n    LIMIT $").concat(idx, " OFFSET $").concat(idx + 1, "\n  ");
+                    return [4 /*yield*/, db_1.pool.query(dataQuery, __spreadArray(__spreadArray([], values, true), [limitNum, offset], false))];
+                case 2:
+                    dataRes = _c.sent();
+                    return [2 /*return*/, {
+                            data: dataRes.rows,
+                            total: total,
+                            currentPage: pageNum,
+                            totalPages: Math.ceil(total / limitNum),
+                        }];
             }
         });
     });
 }
-exports.updateOwnProfileById = updateOwnProfileById;
+exports.getDeletedUsersService = getDeletedUsersService;

@@ -9,11 +9,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateOwnProfile = exports.getDeletedUsers = exports.recoverUser = exports.deleteUser = exports.getUsersPaginated = exports.updateUser = exports.getAllUsers = void 0;
+exports.getDeletedUsers = exports.recoverUser = exports.deleteUser = exports.updateOwnProfile = exports.updateUser = exports.getUsersPaginated = exports.getAllUsers = void 0;
 const user_service_1 = require("../services/user.service");
 const user_validation_1 = require("../validations/user.validation");
 const zod_1 = require("zod");
-const db_1 = require("../utils/db");
 /**
  * Handler untuk mengambil semua user dari database
  */
@@ -28,23 +27,6 @@ const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.getAllUsers = getAllUsers;
-const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
-    try {
-        const parsed = user_validation_1.updateUserSchema.parse(req.body); // Validasi update
-        yield (0, user_service_1.updateUserById)(Object.assign({ id }, parsed));
-        res.status(200).json({ message: 'User berhasil diupdate' });
-    }
-    catch (error) {
-        if (error instanceof zod_1.z.ZodError) {
-            res.status(400).json({ error: error.errors.map(e => e.message) });
-            return;
-        }
-        console.error('Gagal update user:', error);
-        res.status(500).json({ error: 'Gagal update user' });
-    }
-});
-exports.updateUser = updateUser;
 const getUsersPaginated = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { keyword, role, is_verified, page = '1', limit = '10' } = req.query;
@@ -63,6 +45,45 @@ const getUsersPaginated = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.getUsersPaginated = getUsersPaginated;
+const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.params;
+    try {
+        const parsed = user_validation_1.updateUserSchema.parse(req.body); // Validasi update
+        yield (0, user_service_1.updateUserById)(Object.assign({ id }, parsed));
+        res.status(200).json({ message: 'User berhasil diupdate' });
+    }
+    catch (error) {
+        if (error instanceof zod_1.z.ZodError) {
+            res.status(400).json({ error: error.errors.map(e => e.message) });
+            return;
+        }
+        console.error('Gagal update user:', error);
+        res.status(500).json({ error: 'Gagal update user' });
+    }
+});
+exports.updateUser = updateUser;
+const updateOwnProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+    if (!userId) {
+        res.status(401).json({ error: 'Unauthorized: user ID not found' });
+        return;
+    }
+    try {
+        const parsed = user_validation_1.updateOwnProfileSchema.parse(req.body);
+        yield (0, user_service_1.updateOwnProfileById)(Object.assign({ id: userId }, parsed));
+        res.status(200).json({ message: 'Profil berhasil diperbarui' });
+    }
+    catch (error) {
+        if (error instanceof zod_1.z.ZodError) {
+            res.status(400).json({ error: error.errors.map(e => e.message) });
+            return;
+        }
+        console.error('Gagal update profil:', error);
+        res.status(500).json({ error: 'Gagal update profil' });
+    }
+});
+exports.updateOwnProfile = updateOwnProfile;
 // Hapus akun (soft delete) - untuk pengguna dan admin
 const deleteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
@@ -98,46 +119,8 @@ const recoverUser = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 exports.recoverUser = recoverUser;
 const getDeletedUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { keyword, role, is_verified, page = '1', limit = '10' } = req.query;
-        const pageNum = parseInt(page);
-        const limitNum = parseInt(limit);
-        const offset = (pageNum - 1) * limitNum;
-        const values = [];
-        const filters = ['is_deleted = true'];
-        let idx = 1;
-        if (keyword) {
-            filters.push(`(username ILIKE $${idx} OR email ILIKE $${idx})`);
-            values.push(`%${keyword}%`);
-            idx++;
-        }
-        if (role) {
-            filters.push(`role = $${idx}`);
-            values.push(role);
-            idx++;
-        }
-        if (typeof is_verified === 'boolean' || is_verified === 'true' || is_verified === 'false') {
-            filters.push(`is_verified = $${idx}`);
-            values.push(is_verified === 'true');
-            idx++;
-        }
-        const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
-        const countQuery = `SELECT COUNT(*) FROM users ${whereClause}`;
-        const countRes = yield db_1.pool.query(countQuery, values);
-        const total = parseInt(countRes.rows[0].count, 10);
-        const dataQuery = `
-      SELECT id, username, email, role, is_verified, created_at
-      FROM users
-      ${whereClause}
-      ORDER BY created_at DESC
-      LIMIT $${idx} OFFSET $${idx + 1}
-    `;
-        const dataRes = yield db_1.pool.query(dataQuery, [...values, limitNum, offset]);
-        res.status(200).json({
-            data: dataRes.rows,
-            total,
-            currentPage: pageNum,
-            totalPages: Math.ceil(total / limitNum),
-        });
+        const result = yield (0, user_service_1.getDeletedUsersService)(req.query);
+        res.status(200).json(result);
     }
     catch (error) {
         console.error('Gagal ambil user terhapus:', error);
@@ -145,25 +128,3 @@ const getDeletedUsers = (req, res) => __awaiter(void 0, void 0, void 0, function
     }
 });
 exports.getDeletedUsers = getDeletedUsers;
-const updateOwnProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
-    if (!userId) {
-        res.status(401).json({ error: 'Unauthorized: user ID not found' });
-        return;
-    }
-    try {
-        const parsed = user_validation_1.updateOwnProfileSchema.parse(req.body);
-        yield (0, user_service_1.updateOwnProfileById)(Object.assign({ id: userId }, parsed));
-        res.status(200).json({ message: 'Profil berhasil diperbarui' });
-    }
-    catch (error) {
-        if (error instanceof zod_1.z.ZodError) {
-            res.status(400).json({ error: error.errors.map(e => e.message) });
-            return;
-        }
-        console.error('Gagal update profil:', error);
-        res.status(500).json({ error: 'Gagal update profil' });
-    }
-});
-exports.updateOwnProfile = updateOwnProfile;
