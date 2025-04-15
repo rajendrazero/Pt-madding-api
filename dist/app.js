@@ -12,7 +12,9 @@ const app = (0, express_1.default)();
 // Deklarasikan allowedOrigins SEBELUM dipakai
 const allowedOrigins = [
     'http://localhost:5173',
-    'https://pt-madding-web.vercel.app'
+    'https://litera9.vercel.app',
+    'https://litera9-git-main-rajendrazeros-projects.vercel.app',
+    'https://litera9-rajendrazeros-projects.vercel.app',
 ];
 // CORS setup
 const corsOptions = {
