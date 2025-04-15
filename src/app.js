@@ -6,27 +6,25 @@ var auth_router_1 = require("./routes/auth.router");
 var admin_router_1 = require("./routes/admin.router");
 var user_router_1 = require("./routes/user.router");
 var app = (0, express_1.default)();
-// CORS configuration
-// const allowedOrigins = [
-//   'http://localhost:5173',
-//   'https://pt-madding-api-production.up.railway.app',
-// ];
-// app.use(cors({
-//   origin: function (origin, callback) {
-//     if (!origin || allowedOrigins.includes(origin)) {
-//       callback(null, true);
-//     } else {
-//       callback(new Error('Not allowed by CORS'));
-//     }
-//   },
-//   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-//   allowedHeaders: ['Content-Type', 'Authorization'],
-//   credentials: true,
-// }));
-// 
-//Handle preflight requests
-// app.options('*', cors());
-app.use((0, cors_1.default)());
+var allowedOrigins = [
+    'http://localhost:5173',
+    'https://pt-madding-web.vercel.app' // ganti dengan domain frontend kamu di production
+];
+app.use((0, cors_1.default)({
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        }
+        else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+// handle preflight
+app.options('*', (0, cors_1.default)());
 // Middleware
 app.use(express_1.default.json());
 // Test endpoint
