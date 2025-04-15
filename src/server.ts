@@ -1,12 +1,22 @@
-import app from './app';  // Import aplikasi Express yang sudah dibuat
-import dotenv from 'dotenv';
-dotenv.config();
+import express from 'express';
+import cors from 'cors';
+import bodyParser from 'body-parser'; // kalau kamu pakai ini
+import authRoutes from './routes/auth'; // misalnya
 
-// Import cron job agar dapat dijalankan saat server berjalan
-import './utils/cron';  // Pastikan path ke cron.ts sudah benar
+const app = express();
 
-const PORT = process.env.PORT || 3000;
+// === Middleware CORS ===
+app.use(cors({
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+// Middleware lainnya
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// === Routes ===
+app.use('/api/auth', authRoutes);
+
+export default app;
