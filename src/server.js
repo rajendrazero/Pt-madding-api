@@ -7,5 +7,5 @@ dotenv_1.default.config();
 require("./utils/cron"); // Pastikan path ke cron.ts sudah benar
 var PORT = process.env.PORT || 3000;
 app_1.default.listen(PORT, function () {
-    console.log(Server, is, running, on, port, $, { PORT: PORT });
+    console.log("Server is running on port ".concat(PORT));
 });
