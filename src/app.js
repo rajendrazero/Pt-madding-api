@@ -9,7 +9,9 @@ var app = (0, express_1.default)();
 // Deklarasikan allowedOrigins SEBELUM dipakai
 var allowedOrigins = [
     'http://localhost:5173',
-    'https://litera9.vercel.app'
+    'https://litera9.vercel.app',
+    'https://litera9-git-main-rajendrazeros-projects.vercel.app',
+    'https://litera9-rajendrazeros-projects.vercel.app',
 ];
 // CORS setup
 var corsOptions = {
