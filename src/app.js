@@ -6,11 +6,8 @@ var auth_router_1 = require("./routes/auth.router");
 var admin_router_1 = require("./routes/admin.router");
 var user_router_1 = require("./routes/user.router");
 var app = (0, express_1.default)();
-var allowedOrigins = [
-    'http://localhost:5173',
-    'https://pt-madding-web.vercel.app' // ganti dengan domain frontend kamu di production
-];
-app.use((0, cors_1.default)({
+// CORS setup
+var corsOptions = {
     origin: function (origin, callback) {
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
@@ -22,9 +19,9 @@ app.use((0, cors_1.default)({
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
-}));
-// handle preflight
-app.options('*', (0, cors_1.default)());
+};
+app.use((0, cors_1.default)(corsOptions));
+// TIDAK PERLU: app.options('*', cors()) karena sudah dicover di app.use(cors(...))
 // Middleware
 app.use(express_1.default.json());
 // Test endpoint

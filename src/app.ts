@@ -6,26 +6,22 @@ import userRoutes from './routes/user.router';
 
 const app: Application = express();
 
-const allowedOrigins = [
-  'http://localhost:5173', // untuk local development
-  'https://pt-madding-web.vercel.app' // ganti dengan domain frontend kamu di production
-];
-
-app.use(cors({
-  origin: function (origin, callback) {
+// CORS setup
+const corsOptions = {
+  origin: function (origin: any, callback: any) {
     if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
+      callback(null, true)
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error('Not allowed by CORS'))
     }
   },
-  credentials: true, // wajib kalau pakai cookie/JWT dengan auth header
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
-}));
+}
 
-// handle preflight
-app.options('*', cors());
+app.use(cors(corsOptions))
+// TIDAK PERLU: app.options('*', cors()) karena sudah dicover di app.use(cors(...))
 
 // Middleware
 app.use(express.json());
