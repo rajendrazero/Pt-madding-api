@@ -12,6 +12,7 @@ router.get('/', (0, auth_middleware_1.checkRole)('user'), function (req, res) {
     var user = req.user;
     res.status(200).json({ message: 'Profile user', user: user });
 });
+router.get('/', user_controller_1.getAllUsers);
 // Route untuk update profile user (hanya bisa diakses oleh user itu sendiri)
 router.put('/profile', (0, auth_middleware_1.checkRole)('user'), user_controller_1.updateOwnProfile);
 // Route untuk menghapus user (Hanya bisa dihapus oleh admin atau user itu sendiri)

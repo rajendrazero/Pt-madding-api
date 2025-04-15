@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { verifyToken, checkRole } from '../middlewares/auth.middleware';
 import { 
+  getAllUsers,
   updateOwnProfile,
   deleteUser,
 } from '../controllers/user.controller';
@@ -18,6 +19,8 @@ router.get('/', checkRole('user'), (req, res) => {
   const user = req.user;
   res.status(200).json({ message: 'Profile user', user });
 });
+
+router.get('/', getAllUsers);
 
 // Route untuk update profile user (hanya bisa diakses oleh user itu sendiri)
 router.put('/profile', checkRole('user'), updateOwnProfile);
