@@ -1,45 +1,9 @@
-import express, { Application } from 'express';
-import cors from 'cors';
-import authRoutes from './routes/auth.router';
-import adminRoutes from './routes/admin.router';
-import userRoutes from './routes/user.router';
+// src/server.ts
+import app from './app';  // Mengimpor app dari app.ts
 
-const app: Application = express();
+const PORT = process.env.PORT || 3000;  // Tentukan port, default 3000
 
-// Harus dideklarasikan sebelum digunakan
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://pt-madding-web.vercel.app'
-];
-
-// CORS setup
-const corsOptions = {
-  origin: function (origin: any, callback: any) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true)
-    } else {
-      callback(new Error('Not allowed by CORS'))
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}
-
-app.use(cors(corsOptions));
-// Tidak perlu app.options('*') lagi karena sudah tercakup di atas
-
-// Middleware
-app.use(express.json());
-
-// Test endpoint
-app.get('/', (req, res) => {
-  res.send('Server berjalan!');
+// Jalankan server
+app.listen(PORT, () => {
+  console.log(`Server berjalan di http://localhost:${PORT}`);
 });
-
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/user', userRoutes);
-
-export default app;

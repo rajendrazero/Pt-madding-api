@@ -6,6 +6,12 @@ import userRoutes from './routes/user.router';
 
 const app: Application = express();
 
+// Deklarasikan allowedOrigins SEBELUM dipakai
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://pt-madding-web.vercel.app'
+];
+
 // CORS setup
 const corsOptions = {
   origin: function (origin: any, callback: any) {
@@ -18,10 +24,9 @@ const corsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
-}
+};
 
-app.use(cors(corsOptions))
-// TIDAK PERLU: app.options('*', cors()) karena sudah dicover di app.use(cors(...))
+app.use(cors(corsOptions));
 
 // Middleware
 app.use(express.json());
