@@ -1,15 +1,14 @@
 import express from 'express';
 import cors from 'cors';
-import authRoutes from './routes/auth.router';
-import adminRoutes from './routes/admin.router';
-import userRoutes from './routes/user.router';
+import authRoutes from './routes/auth.router.js';
+import adminRoutes from './routes/admin.router.js';
+import userRoutes from './routes/user.router.js';
 
 const app = express();
 
-// Middleware JSON
+// Middleware
 app.use(express.json());
 
-// Tambahkan konfigurasi CORS
 app.use(cors({
   origin: 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -17,17 +16,21 @@ app.use(cors({
   credentials: true,
 }));
 
-// Menangani preflight request
-app.options('*', cors());
+app.options('*', cors({
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
 
 // Tes endpoint
 app.get('/', (req, res) => {
   res.send('Server berjalan!');
 });
 
-// Routes utama
+// Routing
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes); // Admin only
-app.use('/api/user', userRoutes);   // User biasa
+app.use('/api/admin', adminRoutes);
+app.use('/api/user', userRoutes);
 
 export default app;
