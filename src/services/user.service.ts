@@ -1,6 +1,7 @@
 import { pool } from '../utils/db';
 import { Request } from 'express';
 
+
 export async function fetchAllUsers() {
   const res = await pool.query(`
     SELECT id, username, email, role, is_verified, created_at,
