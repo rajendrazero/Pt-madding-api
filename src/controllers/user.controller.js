@@ -47,7 +47,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUserByIdHandler = exports.getDeletedUsers = exports.recoverUser = exports.deleteUser = exports.updateOwnProfile = exports.updateUser = exports.getUsersPaginated = exports.getAllUsers = void 0;
+exports.uploadProfileImage = exports.getUserByIdHandler = exports.getDeletedUsers = exports.recoverUser = exports.deleteUser = exports.updateOwnProfile = exports.updateUser = exports.getUsersPaginated = exports.getAllUsers = void 0;
 var user_service_1 = require("../services/user.service");
 var user_validation_1 = require("../validations/user.validation");
 var zod_1 = require("zod");
@@ -285,3 +285,12 @@ var getUserByIdHandler = function (req, res) { return __awaiter(void 0, void 0, 
     });
 }); };
 exports.getUserByIdHandler = getUserByIdHandler;
+var uploadProfileImage = function (req, res) {
+    var fileUrl = (0, user_service_1.generateProfileImageUrl)(req);
+    if (!fileUrl) {
+        res.status(400).json({ message: 'Tidak ada file yang diupload.' });
+        return;
+    }
+    res.status(200).json({ message: 'Upload berhasil', url: fileUrl });
+};
+exports.uploadProfileImage = uploadProfileImage;

@@ -6,8 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const auth_router_1 = __importDefault(require("./routes/auth.router"));
-const admin_router_1 = __importDefault(require("./routes/admin.router"));
 const user_router_1 = __importDefault(require("./routes/user.router"));
+const path_1 = __importDefault(require("path"));
 const app = (0, express_1.default)();
 // Deklarasikan allowedOrigins SEBELUM dipakai
 const allowedOrigins = [
@@ -37,8 +37,9 @@ app.use(express_1.default.json());
 app.get('/', (req, res) => {
     res.send('Server berjalan!');
 });
+// Middleware untuk melayani file statis dari folder 'uploads'
+app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, '../uploads')));
 // Routes
 app.use('/api/auth', auth_router_1.default);
-app.use('/api/admin', admin_router_1.default);
 app.use('/api/user', user_router_1.default);
 exports.default = app;

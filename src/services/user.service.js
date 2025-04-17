@@ -45,9 +45,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     return to.concat(ar || Array.prototype.slice.call(from));
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUserById = exports.getDeletedUsersService = exports.deleteOldSoftDeletedUsers = exports.recoverUserById = exports.softDeleteUserById = exports.updateOwnProfileById = exports.updateUserById = exports.getUsersWithFilterAndPagination = exports.fetchAllUsers = void 0;
+exports.generateProfileImageUrl = exports.getUserById = exports.getDeletedUsersService = exports.deleteOldSoftDeletedUsers = exports.recoverUserById = exports.softDeleteUserById = exports.updateOwnProfileById = exports.updateUserById = exports.getUsersWithFilterAndPagination = exports.fetchAllUsers = void 0;
 var db_1 = require("../utils/db");
-// Pool adalah koneksi ke PostgreSQL
 function fetchAllUsers() {
     return __awaiter(this, void 0, void 0, function () {
         var res;
@@ -327,3 +326,9 @@ function getUserById(id, includeDeleted) {
     });
 }
 exports.getUserById = getUserById;
+function generateProfileImageUrl(req) {
+    if (!req.file)
+        return null;
+    return "".concat(req.protocol, "://").concat(req.get('host'), "/uploads/").concat(req.file.filename);
+}
+exports.generateProfileImageUrl = generateProfileImageUrl;

@@ -7,7 +7,8 @@ getUsersWithFilterAndPagination,
 recoverUserById,
 updateOwnProfileById,
 getDeletedUsersService,
-getUserById
+getUserById,
+generateProfileImageUrl
 } from '../services/user.service';
 import { v4 as uuidv4 } from 'uuid';
 import { 
@@ -170,4 +171,15 @@ export const getUserByIdHandler: RequestHandler = async (req, res) => {
     console.error('Gagal mengambil user:', error);
     res.status(500).json({ error: 'Terjadi kesalahan saat mengambil user' });
   }
+};
+
+export const uploadProfileImage: RequestHandler = (req, res): void => {
+  const fileUrl = generateProfileImageUrl(req);
+
+  if (!fileUrl) {
+    res.status(400).json({ message: 'Tidak ada file yang diupload.' });
+    return;
+  }
+
+  res.status(200).json({ message: 'Upload berhasil', url: fileUrl });
 };

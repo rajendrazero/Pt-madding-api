@@ -1,42 +1,59 @@
 import { Router } from 'express';
 import { verifyToken, checkRole } from '../middlewares/auth.middleware';
-import { 
+import { upload } from '../middlewares/upload.middleware';
+import {
+  getUserByIdHandler,
   getAllUsers,
   updateOwnProfile,
+  updateUser,
   deleteUser,
-  getUserByIdHandler,  // Import handler yang baru
+  getUsersPaginated,
+  recoverUser,
+  getDeletedUsers,
+  uploadProfileImage,
 } from '../controllers/user.controller';
-import {
-  refreshToken
-} from '../controllers/auth.controller';
+import { refreshToken } from '../controllers/auth.controller';
 
 const router = Router();
 
-// Terapkan middleware untuk semua route di bawahnya
-router.use(verifyToken); // Semua route membutuhkan token yang valid
+// ==================
+// Middleware umum
+// ==================
+router.use(verifyToken);
 
-// Route untuk mendapatkan profile user (hanya bisa diakses oleh user itu sendiri)
+// ==================
+// Route khusus user
+// ==================
 router.get('/', checkRole('user'), (req, res) => {
   const user = req.user;
   res.status(200).json({ message: 'Profile user', user });
 });
 
-// Route untuk mendapatkan user berdasarkan ID (user hanya bisa melihat dirinya sendiri)
-router.get('/:id', checkRole('user'), getUserByIdHandler); // Menambahkan route baru
-
-// Route untuk update profile user (hanya bisa diakses oleh user itu sendiri)
+router.post('/upload', checkRole('user'), upload.single('photo'), uploadProfileImage);
 router.put('/profile', checkRole('user'), updateOwnProfile);
-
-// Route untuk menghapus user (Hanya bisa dihapus oleh admin atau user itu sendiri)
+router.get('/:id', checkRole('user'), getUserByIdHandler);
 router.delete('/:id', checkRole('user'), deleteUser);
 
-// Route untuk logout
-router.post('/logout', (req, res) => {
-  // Tidak perlu melakukan apapun di server karena token JWT bersifat stateless
-  // Hanya mengembalikan response logout berhasil
+// ==================
+// Route khusus admin
+// ==================
+router.use(checkRole('admin')); // Semua route di bawah hanya bisa diakses admin
+
+router.post('/upload', upload.single('photo'), uploadProfileImage); // Admin upload avatar user
+router.get('/users', getAllUsers);
+router.get('/users/deleted', getDeletedUsers);
+router.get('/users/search', getUsersPaginated);
+router.patch('/users/:id/recover', recoverUser);
+router.get('/users/:id', getUserByIdHandler);
+router.put('/users/:id', updateUser);
+router.delete('/users/:id', deleteUser);
+
+// ==================
+// Auth umum
+// ==================
+router.post('/refresh-token', refreshToken);
+router.post('/logout', (_req, res) => {
   res.status(200).json({ message: 'Logout berhasil' });
 });
-
-router.post('/refresh-token', refreshToken);
 
 export default router;

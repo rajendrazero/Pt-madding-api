@@ -1,5 +1,5 @@
 import { pool } from '../utils/db';
-// Pool adalah koneksi ke PostgreSQL
+import { Request } from 'express';
 
 export async function fetchAllUsers() {
   const res = await pool.query(`
@@ -303,4 +303,11 @@ export async function getUserById(
     [id]
   );
   return res.rows[0];
+}
+
+
+
+export function generateProfileImageUrl(req: Request): string | null {
+  if (!req.file) return null;
+  return `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
 }

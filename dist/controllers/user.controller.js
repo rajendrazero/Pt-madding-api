@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUserByIdHandler = exports.getDeletedUsers = exports.recoverUser = exports.deleteUser = exports.updateOwnProfile = exports.updateUser = exports.getUsersPaginated = exports.getAllUsers = void 0;
+exports.uploadProfileImage = exports.getUserByIdHandler = exports.getDeletedUsers = exports.recoverUser = exports.deleteUser = exports.updateOwnProfile = exports.updateUser = exports.getUsersPaginated = exports.getAllUsers = void 0;
 const user_service_1 = require("../services/user.service");
 const user_validation_1 = require("../validations/user.validation");
 const zod_1 = require("zod");
@@ -49,8 +49,12 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     const { id } = req.params;
     try {
         const parsed = user_validation_1.updateUserSchema.parse(req.body); // Validasi update
-        yield (0, user_service_1.updateUserById)(Object.assign({ id }, parsed));
-        res.status(200).json({ message: 'User berhasil diupdate' });
+        yield (0, user_service_1.updateUserById)(Object.assign({ id }, parsed)); // Lakukan update
+        const updatedUser = yield (0, user_service_1.getUserById)(id); // Ambil user yang sudah diperbarui
+        res.status(200).json({
+            message: 'User berhasil diupdate',
+            user: updatedUser
+        });
     }
     catch (error) {
         if (error instanceof zod_1.z.ZodError) {
@@ -72,7 +76,11 @@ const updateOwnProfile = (req, res) => __awaiter(void 0, void 0, void 0, functio
     try {
         const parsed = user_validation_1.updateOwnProfileSchema.parse(req.body);
         yield (0, user_service_1.updateOwnProfileById)(Object.assign({ id: userId }, parsed));
-        res.status(200).json({ message: 'Profil berhasil diperbarui' });
+        const updatedUser = yield (0, user_service_1.getUserById)(userId); // Ambil data terbaru
+        res.status(200).json({
+            message: 'Profil berhasil diperbarui',
+            user: updatedUser
+        });
     }
     catch (error) {
         if (error instanceof zod_1.z.ZodError) {
@@ -146,3 +154,12 @@ const getUserByIdHandler = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.getUserByIdHandler = getUserByIdHandler;
+const uploadProfileImage = (req, res) => {
+    const fileUrl = (0, user_service_1.generateProfileImageUrl)(req);
+    if (!fileUrl) {
+        res.status(400).json({ message: 'Tidak ada file yang diupload.' });
+        return;
+    }
+    res.status(200).json({ message: 'Upload berhasil', url: fileUrl });
+};
+exports.uploadProfileImage = uploadProfileImage;
