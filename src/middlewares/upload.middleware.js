@@ -7,9 +7,11 @@ var path_1 = require("path");
 var sanitizeFilename = function (filename) {
     return filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.-]/g, '');
 };
+// Menggunakan path absolut untuk folder uploads
+var uploadsPath = path_1.default.resolve(__dirname, '../../uploads');
 var storage = multer_1.default.diskStorage({
     destination: function (_req, _file, cb) {
-        cb(null, 'uploads/');
+        cb(null, uploadsPath); // Menggunakan path absolut
     },
     filename: function (_req, file, cb) {
         var sanitizedFilename = sanitizeFilename(file.originalname);

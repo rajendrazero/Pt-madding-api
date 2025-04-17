@@ -8,10 +8,10 @@ const app: Application = express();
 
 // Deklarasikan allowedOrigins SEBELUM dipakai
 const allowedOrigins = [
-    'http://localhost:5173',
-    'https://litera9.vercel.app',
-    'https://litera9-git-main-rajendrazeros-projects.vercel.app',
-    'https://litera9-rajendrazeros-projects.vercel.app',
+  'http://localhost:5173',
+  'https://litera9.vercel.app',
+  'https://litera9-git-main-rajendrazeros-projects.vercel.app',
+  'https://litera9-rajendrazeros-projects.vercel.app',
 ];
 
 // CORS setup
@@ -38,9 +38,9 @@ app.get('/', (req, res) => {
   res.send('Server berjalan!');
 });
 
-
 // Middleware untuk melayani file statis dari folder 'uploads'
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Gunakan path absolut di sini juga
+app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
