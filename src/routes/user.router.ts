@@ -56,10 +56,3 @@ router.post('/logout', (_req, res) => {
 });
 
 export default router;
-
-
-/*
-##public / anoun
-##eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNnZ2txaHdlYXR2cnNhbGtwd3J0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQzNjEyMjUsImV4cCI6MjA1OTkzNzIyNX0.3XMCDfeeylSJyk373dApP3OdAF66cHwcTZGLMsitnHg
-
-*/
