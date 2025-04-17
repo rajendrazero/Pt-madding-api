@@ -285,12 +285,46 @@ var getUserByIdHandler = function (req, res) { return __awaiter(void 0, void 0, 
     });
 }); };
 exports.getUserByIdHandler = getUserByIdHandler;
-var uploadProfileImage = function (req, res) {
-    var fileUrl = (0, user_service_1.generateProfileImageUrl)(req);
-    if (!fileUrl) {
-        res.status(400).json({ message: 'Tidak ada file yang diupload.' });
-        return;
-    }
-    res.status(200).json({ message: 'Upload berhasil', url: fileUrl });
-};
+var uploadProfileImage = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
+    var userId, fileUrl, updatedUser, error_9;
+    var _a;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+                if (!userId) {
+                    res.status(401).json({ error: 'Unauthorized: user ID not found' });
+                    return [2 /*return*/];
+                }
+                fileUrl = (0, user_service_1.generateProfileImageUrl)(req);
+                if (!fileUrl) {
+                    res.status(400).json({ message: 'Tidak ada file yang diupload.' });
+                    return [2 /*return*/];
+                }
+                _b.label = 1;
+            case 1:
+                _b.trys.push([1, 4, , 5]);
+                // Update field photo_url di database
+                return [4 /*yield*/, (0, user_service_1.updateOwnProfileById)({ id: userId, photo_url: fileUrl })];
+            case 2:
+                // Update field photo_url di database
+                _b.sent();
+                return [4 /*yield*/, (0, user_service_1.getUserById)(userId)];
+            case 3:
+                updatedUser = _b.sent();
+                res.status(200).json({
+                    message: 'Upload berhasil & profil diperbarui',
+                    url: fileUrl,
+                    user: updatedUser
+                });
+                return [3 /*break*/, 5];
+            case 4:
+                error_9 = _b.sent();
+                console.error('Gagal update photo_url:', error_9);
+                res.status(500).json({ error: 'Gagal menyimpan URL foto ke database' });
+                return [3 /*break*/, 5];
+            case 5: return [2 /*return*/];
+        }
+    });
+}); };
 exports.uploadProfileImage = uploadProfileImage;

@@ -10,9 +10,11 @@ const path_1 = __importDefault(require("path"));
 const sanitizeFilename = (filename) => {
     return filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.-]/g, '');
 };
+// Menggunakan path absolut untuk folder uploads
+const uploadsPath = path_1.default.resolve(__dirname, '../../uploads');
 const storage = multer_1.default.diskStorage({
     destination: (_req, _file, cb) => {
-        cb(null, 'uploads/');
+        cb(null, uploadsPath); // Menggunakan path absolut
     },
     filename: (_req, file, cb) => {
         const sanitizedFilename = sanitizeFilename(file.originalname);

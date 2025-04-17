@@ -154,12 +154,31 @@ const getUserByIdHandler = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.getUserByIdHandler = getUserByIdHandler;
-const uploadProfileImage = (req, res) => {
+const uploadProfileImage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+    if (!userId) {
+        res.status(401).json({ error: 'Unauthorized: user ID not found' });
+        return;
+    }
     const fileUrl = (0, user_service_1.generateProfileImageUrl)(req);
     if (!fileUrl) {
         res.status(400).json({ message: 'Tidak ada file yang diupload.' });
         return;
     }
-    res.status(200).json({ message: 'Upload berhasil', url: fileUrl });
-};
+    try {
+        // Update field photo_url di database
+        yield (0, user_service_1.updateOwnProfileById)({ id: userId, photo_url: fileUrl });
+        const updatedUser = yield (0, user_service_1.getUserById)(userId);
+        res.status(200).json({
+            message: 'Upload berhasil & profil diperbarui',
+            url: fileUrl,
+            user: updatedUser
+        });
+    }
+    catch (error) {
+        console.error('Gagal update photo_url:', error);
+        res.status(500).json({ error: 'Gagal menyimpan URL foto ke database' });
+    }
+});
 exports.uploadProfileImage = uploadProfileImage;
