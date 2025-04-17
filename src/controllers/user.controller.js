@@ -51,6 +51,8 @@ exports.uploadProfileImage = exports.getUserByIdHandler = exports.getDeletedUser
 var user_service_1 = require("../services/user.service");
 var user_validation_1 = require("../validations/user.validation");
 var zod_1 = require("zod");
+var supabaseClient_1 = require("../utils/supabaseClient");
+var sharp_1 = require("sharp");
 /**
  * Handler untuk mengambil semua user dari database
  */
@@ -286,44 +288,80 @@ var getUserByIdHandler = function (req, res) { return __awaiter(void 0, void 0, 
 }); };
 exports.getUserByIdHandler = getUserByIdHandler;
 var uploadProfileImage = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var userId, fileUrl, updatedUser, error_9;
-    var _a;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
+    var userId, file, fileExt, fileName, resizedBuffer, user, oldPhotoUrl, _a, data, uploadError, publicUrlData, photo_url, oldFile, updatedUser, error_9;
+    var _b;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
             case 0:
-                userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+                userId = (_b = req.user) === null || _b === void 0 ? void 0 : _b.userId;
                 if (!userId) {
                     res.status(401).json({ error: 'Unauthorized: user ID not found' });
                     return [2 /*return*/];
                 }
-                fileUrl = (0, user_service_1.generateProfileImageUrl)(req);
-                if (!fileUrl) {
+                if (!req.file) {
                     res.status(400).json({ message: 'Tidak ada file yang diupload.' });
                     return [2 /*return*/];
                 }
-                _b.label = 1;
+                file = req.file;
+                fileExt = file.originalname.split('.').pop();
+                fileName = "avatars/".concat(userId, "_").concat(Date.now(), ".").concat(fileExt);
+                _c.label = 1;
             case 1:
-                _b.trys.push([1, 4, , 5]);
-                // Update field photo_url di database
-                return [4 /*yield*/, (0, user_service_1.updateOwnProfileById)({ id: userId, photo_url: fileUrl })];
+                _c.trys.push([1, 9, , 10]);
+                return [4 /*yield*/, (0, sharp_1.default)(file.buffer)
+                        .resize(300, 300, { fit: 'cover' })
+                        .toFormat('jpeg')
+                        .jpeg({ quality: 80 })
+                        .toBuffer()];
             case 2:
-                // Update field photo_url di database
-                _b.sent();
+                resizedBuffer = _c.sent();
                 return [4 /*yield*/, (0, user_service_1.getUserById)(userId)];
             case 3:
-                updatedUser = _b.sent();
+                user = _c.sent();
+                oldPhotoUrl = user === null || user === void 0 ? void 0 : user.photo_url;
+                return [4 /*yield*/, supabaseClient_1.supabase.storage
+                        .from('avatars')
+                        .upload(fileName, resizedBuffer, {
+                        contentType: 'image/jpeg',
+                        upsert: true,
+                    })];
+            case 4:
+                _a = _c.sent(), data = _a.data, uploadError = _a.error;
+                if (uploadError) {
+                    console.error('Upload gagal:', uploadError);
+                    res.status(500).json({ error: 'Gagal upload gambar ke Supabase' });
+                    return [2 /*return*/];
+                }
+                publicUrlData = supabaseClient_1.supabase.storage.from('avatars').getPublicUrl(fileName).data;
+                photo_url = publicUrlData.publicUrl;
+                if (!(oldPhotoUrl && oldPhotoUrl.includes('avatars/'))) return [3 /*break*/, 6];
+                oldFile = oldPhotoUrl.split('/').pop();
+                if (!oldFile) return [3 /*break*/, 6];
+                return [4 /*yield*/, supabaseClient_1.supabase.storage.from('avatars').remove(["avatars/".concat(oldFile)])];
+            case 5:
+                _c.sent();
+                _c.label = 6;
+            case 6: 
+            // Simpan ke database
+            return [4 /*yield*/, (0, user_service_1.updateOwnProfileById)({ id: userId, photo_url: photo_url })];
+            case 7:
+                // Simpan ke database
+                _c.sent();
+                return [4 /*yield*/, (0, user_service_1.getUserById)(userId)];
+            case 8:
+                updatedUser = _c.sent();
                 res.status(200).json({
                     message: 'Upload berhasil & profil diperbarui',
-                    url: fileUrl,
-                    user: updatedUser
+                    url: photo_url,
+                    user: updatedUser,
                 });
-                return [3 /*break*/, 5];
-            case 4:
-                error_9 = _b.sent();
-                console.error('Gagal update photo_url:', error_9);
-                res.status(500).json({ error: 'Gagal menyimpan URL foto ke database' });
-                return [3 /*break*/, 5];
-            case 5: return [2 /*return*/];
+                return [3 /*break*/, 10];
+            case 9:
+                error_9 = _c.sent();
+                console.error('Gagal proses upload:', error_9);
+                res.status(500).json({ error: 'Terjadi kesalahan saat upload gambar' });
+                return [3 /*break*/, 10];
+            case 10: return [2 /*return*/];
         }
     });
 }); };

@@ -8,7 +8,6 @@ recoverUserById,
 updateOwnProfileById,
 getDeletedUsersService,
 getUserById,
-generateProfileImageUrl
 } from '../services/user.service';
 import { v4 as uuidv4 } from 'uuid';
 import { 
@@ -19,8 +18,8 @@ import {
 '../validations/user.validation';
 import { z } from 'zod';
 import { pool } from '../utils/db'; 
-
-
+import { supabase } from '../utils/supabaseClient';
+import sharp from 'sharp';
 /**
  * Handler untuk mengambil semua user dari database
  */
@@ -173,6 +172,7 @@ export const getUserByIdHandler: RequestHandler = async (req, res) => {
   }
 };
 
+
 export const uploadProfileImage: RequestHandler = async (req, res): Promise<void> => {
   const userId = req.user?.userId;
 
@@ -181,26 +181,64 @@ export const uploadProfileImage: RequestHandler = async (req, res): Promise<void
     return;
   }
 
-  const fileUrl = generateProfileImageUrl(req);
-
-  if (!fileUrl) {
+  if (!req.file) {
     res.status(400).json({ message: 'Tidak ada file yang diupload.' });
     return;
   }
 
+  const file = req.file;
+  const fileExt = file.originalname.split('.').pop();
+  const fileName = `avatars/${userId}_${Date.now()}.${fileExt}`;
+
   try {
-    // Update field photo_url di database
-    await updateOwnProfileById({ id: userId, photo_url: fileUrl });
+    // Resize gambar ke max width/height 300px dengan kualitas bagus
+    const resizedBuffer = await sharp(file.buffer)
+      .resize(300, 300, { fit: 'cover' })
+      .toFormat('jpeg')
+      .jpeg({ quality: 80 })
+      .toBuffer();
+
+    // Ambil data user untuk mengetahui photo_url lama (jika ada)
+    const user = await getUserById(userId);
+    const oldPhotoUrl = user?.photo_url;
+
+    // Upload gambar baru ke Supabase
+    const { data, error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, resizedBuffer, {
+        contentType: 'image/jpeg',
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error('Upload gagal:', uploadError);
+      res.status(500).json({ error: 'Gagal upload gambar ke Supabase' });
+      return;
+    }
+
+    // Ambil public URL file baru
+    const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
+    const photo_url = publicUrlData.publicUrl;
+
+    // Hapus foto lama (jika ada dan bukan default)
+    if (oldPhotoUrl && oldPhotoUrl.includes('avatars/')) {
+      const oldFile = oldPhotoUrl.split('/').pop();
+      if (oldFile) {
+        await supabase.storage.from('avatars').remove([`avatars/${oldFile}`]);
+      }
+    }
+
+    // Simpan ke database
+    await updateOwnProfileById({ id: userId, photo_url });
 
     const updatedUser = await getUserById(userId);
-
     res.status(200).json({
       message: 'Upload berhasil & profil diperbarui',
-      url: fileUrl,
-      user: updatedUser
+      url: photo_url,
+      user: updatedUser,
     });
   } catch (error) {
-    console.error('Gagal update photo_url:', error);
-    res.status(500).json({ error: 'Gagal menyimpan URL foto ke database' });
+    console.error('Gagal proses upload:', error);
+    res.status(500).json({ error: 'Terjadi kesalahan saat upload gambar' });
   }
 };

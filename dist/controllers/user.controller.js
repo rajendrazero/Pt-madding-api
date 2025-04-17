@@ -8,11 +8,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.uploadProfileImage = exports.getUserByIdHandler = exports.getDeletedUsers = exports.recoverUser = exports.deleteUser = exports.updateOwnProfile = exports.updateUser = exports.getUsersPaginated = exports.getAllUsers = void 0;
 const user_service_1 = require("../services/user.service");
 const user_validation_1 = require("../validations/user.validation");
 const zod_1 = require("zod");
+const supabaseClient_1 = require("../utils/supabaseClient");
+const sharp_1 = __importDefault(require("sharp"));
 /**
  * Handler untuk mengambil semua user dari database
  */
@@ -161,24 +166,57 @@ const uploadProfileImage = (req, res) => __awaiter(void 0, void 0, void 0, funct
         res.status(401).json({ error: 'Unauthorized: user ID not found' });
         return;
     }
-    const fileUrl = (0, user_service_1.generateProfileImageUrl)(req);
-    if (!fileUrl) {
+    if (!req.file) {
         res.status(400).json({ message: 'Tidak ada file yang diupload.' });
         return;
     }
+    const file = req.file;
+    const fileExt = file.originalname.split('.').pop();
+    const fileName = `avatars/${userId}_${Date.now()}.${fileExt}`;
     try {
-        // Update field photo_url di database
-        yield (0, user_service_1.updateOwnProfileById)({ id: userId, photo_url: fileUrl });
+        // Resize gambar ke max width/height 300px dengan kualitas bagus
+        const resizedBuffer = yield (0, sharp_1.default)(file.buffer)
+            .resize(300, 300, { fit: 'cover' })
+            .toFormat('jpeg')
+            .jpeg({ quality: 80 })
+            .toBuffer();
+        // Ambil data user untuk mengetahui photo_url lama (jika ada)
+        const user = yield (0, user_service_1.getUserById)(userId);
+        const oldPhotoUrl = user === null || user === void 0 ? void 0 : user.photo_url;
+        // Upload gambar baru ke Supabase
+        const { data, error: uploadError } = yield supabaseClient_1.supabase.storage
+            .from('avatars')
+            .upload(fileName, resizedBuffer, {
+            contentType: 'image/jpeg',
+            upsert: true,
+        });
+        if (uploadError) {
+            console.error('Upload gagal:', uploadError);
+            res.status(500).json({ error: 'Gagal upload gambar ke Supabase' });
+            return;
+        }
+        // Ambil public URL file baru
+        const { data: publicUrlData } = supabaseClient_1.supabase.storage.from('avatars').getPublicUrl(fileName);
+        const photo_url = publicUrlData.publicUrl;
+        // Hapus foto lama (jika ada dan bukan default)
+        if (oldPhotoUrl && oldPhotoUrl.includes('avatars/')) {
+            const oldFile = oldPhotoUrl.split('/').pop();
+            if (oldFile) {
+                yield supabaseClient_1.supabase.storage.from('avatars').remove([`avatars/${oldFile}`]);
+            }
+        }
+        // Simpan ke database
+        yield (0, user_service_1.updateOwnProfileById)({ id: userId, photo_url });
         const updatedUser = yield (0, user_service_1.getUserById)(userId);
         res.status(200).json({
             message: 'Upload berhasil & profil diperbarui',
-            url: fileUrl,
-            user: updatedUser
+            url: photo_url,
+            user: updatedUser,
         });
     }
     catch (error) {
-        console.error('Gagal update photo_url:', error);
-        res.status(500).json({ error: 'Gagal menyimpan URL foto ke database' });
+        console.error('Gagal proses upload:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan saat upload gambar' });
     }
 });
 exports.uploadProfileImage = uploadProfileImage;

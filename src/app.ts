@@ -2,7 +2,6 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth.router';
 import userRoutes from './routes/user.router';
-import path from 'path';
 
 const app: Application = express();
 
@@ -38,9 +37,6 @@ app.get('/', (req, res) => {
   res.send('Server berjalan!');
 });
 
-// Middleware untuk melayani file statis dari folder 'uploads'
-// Gunakan path absolut di sini juga
-app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);

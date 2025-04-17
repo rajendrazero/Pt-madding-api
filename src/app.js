@@ -4,7 +4,6 @@ var express_1 = require("express");
 var cors_1 = require("cors");
 var auth_router_1 = require("./routes/auth.router");
 var user_router_1 = require("./routes/user.router");
-var path_1 = require("path");
 var app = (0, express_1.default)();
 // Deklarasikan allowedOrigins SEBELUM dipakai
 var allowedOrigins = [
@@ -34,9 +33,6 @@ app.use(express_1.default.json());
 app.get('/', function (req, res) {
     res.send('Server berjalan!');
 });
-// Middleware untuk melayani file statis dari folder 'uploads'
-// Gunakan path absolut di sini juga
-app.use('/uploads', express_1.default.static(path_1.default.resolve(__dirname, '../uploads')));
 // Routes
 app.use('/api/auth', auth_router_1.default);
 app.use('/api/user', user_router_1.default);

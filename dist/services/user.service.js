@@ -18,7 +18,6 @@ exports.recoverUserById = recoverUserById;
 exports.deleteOldSoftDeletedUsers = deleteOldSoftDeletedUsers;
 exports.getDeletedUsersService = getDeletedUsersService;
 exports.getUserById = getUserById;
-exports.generateProfileImageUrl = generateProfileImageUrl;
 const db_1 = require("../utils/db");
 function fetchAllUsers() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -240,9 +239,4 @@ function getUserById(id_1) {
      WHERE id = $1 ${includeDeleted ? '' : 'AND is_deleted = false'}`, [id]);
         return res.rows[0];
     });
-}
-function generateProfileImageUrl(req) {
-    if (!req.file)
-        return null;
-    return `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
 }

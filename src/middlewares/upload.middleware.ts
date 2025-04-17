@@ -1,35 +1,13 @@
 import multer, { FileFilterCallback } from 'multer';
-import path from 'path';
 import { Request } from 'express';
 
-// Fungsi untuk sanitasi nama file
-const sanitizeFilename = (filename: string): string => {
-  return filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.-]/g, '');
-};
+const storage = multer.memoryStorage();
 
-// Menggunakan path absolut untuk folder uploads
-const uploadsPath = path.resolve(__dirname, '../../uploads');
+const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, uploadsPath); // Menggunakan path absolut
-  },
-  filename: (_req, file, cb) => {
-    const sanitizedFilename = sanitizeFilename(file.originalname);
-    const uniqueName = `${Date.now()}-${sanitizedFilename}`;
-    cb(null, uniqueName);
-  },
-});
-
-const fileFilter = (
-  _req: Request,
-  file: Express.Multer.File,
-  cb: FileFilterCallback
-): void => {
-  const allowed = ['.png', '.jpg', '.jpeg', '.webp'];
-  const ext = path.extname(file.originalname).toLowerCase();
-  if (!allowed.includes(ext)) {
-    cb(new Error('Hanya file gambar yang diperbolehkan.'));
+const fileFilter = (_req: Request, file: Express.Multer.File, cb: FileFilterCallback): void => {
+  if (!allowedMimeTypes.includes(file.mimetype)) {
+    cb(new Error('Hanya file gambar (JPEG, PNG, WEBP) yang diperbolehkan.'));
   } else {
     cb(null, true);
   }
@@ -38,5 +16,9 @@ const fileFilter = (
 export const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 2 * 1024 * 1024 }, // Max 2MB
+  limits: {
+    fileSize: 2 * 1024 * 1024, // Maksimal 2MB
+  },
 });
+
+

@@ -305,10 +305,3 @@ export async function getUserById(
   );
   return res.rows[0];
 }
-
-
-
-export function generateProfileImageUrl(req: Request): string | null {
-  if (!req.file) return null;
-  return `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-}

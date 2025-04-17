@@ -2,28 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.upload = void 0;
 var multer_1 = require("multer");
-var path_1 = require("path");
-// Fungsi untuk sanitasi nama file
-var sanitizeFilename = function (filename) {
-    return filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.-]/g, '');
-};
-// Menggunakan path absolut untuk folder uploads
-var uploadsPath = path_1.default.resolve(__dirname, '../../uploads');
-var storage = multer_1.default.diskStorage({
-    destination: function (_req, _file, cb) {
-        cb(null, uploadsPath); // Menggunakan path absolut
-    },
-    filename: function (_req, file, cb) {
-        var sanitizedFilename = sanitizeFilename(file.originalname);
-        var uniqueName = "".concat(Date.now(), "-").concat(sanitizedFilename);
-        cb(null, uniqueName);
-    },
-});
+var storage = multer_1.default.memoryStorage();
+var allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 var fileFilter = function (_req, file, cb) {
-    var allowed = ['.png', '.jpg', '.jpeg', '.webp'];
-    var ext = path_1.default.extname(file.originalname).toLowerCase();
-    if (!allowed.includes(ext)) {
-        cb(new Error('Hanya file gambar yang diperbolehkan.'));
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+        cb(new Error('Hanya file gambar (JPEG, PNG, WEBP) yang diperbolehkan.'));
     }
     else {
         cb(null, true);
@@ -32,5 +15,7 @@ var fileFilter = function (_req, file, cb) {
 exports.upload = (0, multer_1.default)({
     storage: storage,
     fileFilter: fileFilter,
-    limits: { fileSize: 2 * 1024 * 1024 }, // Max 2MB
+    limits: {
+        fileSize: 2 * 1024 * 1024, // Maksimal 2MB
+    },
 });
