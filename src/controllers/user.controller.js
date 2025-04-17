@@ -104,21 +104,27 @@ var getUsersPaginated = function (req, res) { return __awaiter(void 0, void 0, v
 }); };
 exports.getUsersPaginated = getUsersPaginated;
 var updateUser = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var id, parsed, error_3;
+    var id, parsed, updatedUser, error_3;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 id = req.params.id;
                 _a.label = 1;
             case 1:
-                _a.trys.push([1, 3, , 4]);
+                _a.trys.push([1, 4, , 5]);
                 parsed = user_validation_1.updateUserSchema.parse(req.body);
                 return [4 /*yield*/, (0, user_service_1.updateUserById)(__assign({ id: id }, parsed))];
             case 2:
-                _a.sent();
-                res.status(200).json({ message: 'User berhasil diupdate' });
-                return [3 /*break*/, 4];
+                _a.sent(); // Lakukan update
+                return [4 /*yield*/, (0, user_service_1.getUserById)(id)];
             case 3:
+                updatedUser = _a.sent();
+                res.status(200).json({
+                    message: 'User berhasil diupdate',
+                    user: updatedUser
+                });
+                return [3 /*break*/, 5];
+            case 4:
                 error_3 = _a.sent();
                 if (error_3 instanceof zod_1.z.ZodError) {
                     res.status(400).json({ error: error_3.errors.map(function (e) { return e.message; }) });
@@ -126,14 +132,14 @@ var updateUser = function (req, res) { return __awaiter(void 0, void 0, Promise,
                 }
                 console.error('Gagal update user:', error_3);
                 res.status(500).json({ error: 'Gagal update user' });
-                return [3 /*break*/, 4];
-            case 4: return [2 /*return*/];
+                return [3 /*break*/, 5];
+            case 5: return [2 /*return*/];
         }
     });
 }); };
 exports.updateUser = updateUser;
 var updateOwnProfile = function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var userId, parsed, error_4;
+    var userId, parsed, updatedUser, error_4;
     var _a;
     return __generator(this, function (_b) {
         switch (_b.label) {
@@ -145,14 +151,20 @@ var updateOwnProfile = function (req, res) { return __awaiter(void 0, void 0, Pr
                 }
                 _b.label = 1;
             case 1:
-                _b.trys.push([1, 3, , 4]);
+                _b.trys.push([1, 4, , 5]);
                 parsed = user_validation_1.updateOwnProfileSchema.parse(req.body);
                 return [4 /*yield*/, (0, user_service_1.updateOwnProfileById)(__assign({ id: userId }, parsed))];
             case 2:
                 _b.sent();
-                res.status(200).json({ message: 'Profil berhasil diperbarui' });
-                return [3 /*break*/, 4];
+                return [4 /*yield*/, (0, user_service_1.getUserById)(userId)];
             case 3:
+                updatedUser = _b.sent();
+                res.status(200).json({
+                    message: 'Profil berhasil diperbarui',
+                    user: updatedUser
+                });
+                return [3 /*break*/, 5];
+            case 4:
                 error_4 = _b.sent();
                 if (error_4 instanceof zod_1.z.ZodError) {
                     res.status(400).json({ error: error_4.errors.map(function (e) { return e.message; }) });
@@ -160,8 +172,8 @@ var updateOwnProfile = function (req, res) { return __awaiter(void 0, void 0, Pr
                 }
                 console.error('Gagal update profil:', error_4);
                 res.status(500).json({ error: 'Gagal update profil' });
-                return [3 /*break*/, 4];
-            case 4: return [2 /*return*/];
+                return [3 /*break*/, 5];
+            case 5: return [2 /*return*/];
         }
     });
 }); };

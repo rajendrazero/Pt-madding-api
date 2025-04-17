@@ -65,8 +65,13 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
 
   try {
     const parsed = updateUserSchema.parse(req.body); // Validasi update
-    await updateUserById({ id, ...parsed });
-    res.status(200).json({ message: 'User berhasil diupdate' });
+    await updateUserById({ id, ...parsed }); // Lakukan update
+
+    const updatedUser = await getUserById(id); // Ambil user yang sudah diperbarui
+    res.status(200).json({
+      message: 'User berhasil diupdate',
+      user: updatedUser
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: error.errors.map(e => e.message) });
@@ -89,7 +94,12 @@ export const updateOwnProfile: RequestHandler = async (req, res): Promise<void> 
   try {
     const parsed = updateOwnProfileSchema.parse(req.body);
     await updateOwnProfileById({ id: userId, ...parsed });
-    res.status(200).json({ message: 'Profil berhasil diperbarui' });
+
+    const updatedUser = await getUserById(userId); // Ambil data terbaru
+    res.status(200).json({
+      message: 'Profil berhasil diperbarui',
+      user: updatedUser
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: error.errors.map(e => e.message) });
