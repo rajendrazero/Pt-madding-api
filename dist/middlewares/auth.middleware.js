@@ -12,9 +12,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.handleRefreshToken = exports.checkRole = exports.verifyToken = void 0;
+exports.handleRefreshToken = exports.checkRoles = exports.verifyToken = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const jwt_1 = require("../utils/jwt");
+// Middleware untuk memverifikasi token JWT
 const verifyToken = (req, res, next) => {
     var _a;
     const token = (_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split(' ')[1];
@@ -33,18 +34,20 @@ const verifyToken = (req, res, next) => {
     }
 };
 exports.verifyToken = verifyToken;
-const checkRole = (role) => {
+// Middleware untuk memeriksa apakah role yang diberikan termasuk yang diperbolehkan
+const checkRoles = (...allowedRoles) => {
     return (req, res, next) => {
         var _a;
         const userRole = (_a = req.user) === null || _a === void 0 ? void 0 : _a.role;
-        if (userRole !== role) {
+        if (!userRole || !allowedRoles.includes(userRole)) {
             res.status(403).json({ error: 'Akses ditolak. Role tidak sesuai.' });
             return;
         }
         next();
     };
 };
-exports.checkRole = checkRole;
+exports.checkRoles = checkRoles;
+// Fungsi untuk menangani refresh token
 const handleRefreshToken = (refreshToken) => __awaiter(void 0, void 0, void 0, function* () {
     if (!refreshToken) {
         throw new Error('Refresh token tidak ditemukan');

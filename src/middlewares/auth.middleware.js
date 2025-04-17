@@ -36,9 +36,10 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.handleRefreshToken = exports.checkRole = exports.verifyToken = void 0;
+exports.handleRefreshToken = exports.checkRoles = exports.verifyToken = void 0;
 var jsonwebtoken_1 = require("jsonwebtoken");
 var jwt_1 = require("../utils/jwt");
+// Middleware untuk memverifikasi token JWT
 var verifyToken = function (req, res, next) {
     var _a;
     var token = (_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split(' ')[1];
@@ -57,18 +58,24 @@ var verifyToken = function (req, res, next) {
     }
 };
 exports.verifyToken = verifyToken;
-var checkRole = function (role) {
+// Middleware untuk memeriksa apakah role yang diberikan termasuk yang diperbolehkan
+var checkRoles = function () {
+    var allowedRoles = [];
+    for (var _i = 0; _i < arguments.length; _i++) {
+        allowedRoles[_i] = arguments[_i];
+    }
     return function (req, res, next) {
         var _a;
         var userRole = (_a = req.user) === null || _a === void 0 ? void 0 : _a.role;
-        if (userRole !== role) {
+        if (!userRole || !allowedRoles.includes(userRole)) {
             res.status(403).json({ error: 'Akses ditolak. Role tidak sesuai.' });
             return;
         }
         next();
     };
 };
-exports.checkRole = checkRole;
+exports.checkRoles = checkRoles;
+// Fungsi untuk menangani refresh token
 var handleRefreshToken = function (refreshToken) { return __awaiter(void 0, void 0, Promise, function () {
     var decoded;
     return __generator(this, function (_a) {

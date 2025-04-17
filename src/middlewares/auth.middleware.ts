@@ -1,6 +1,7 @@
+// auth.middleware.ts
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { generateToken } from '../utils/jwt'; 
+import { generateToken } from '../utils/jwt';
 
 interface UserPayload {
   userId: string;
@@ -16,6 +17,7 @@ declare global {
   }
 }
 
+// Middleware untuk memverifikasi token JWT
 export const verifyToken = (req: Request, res: Response, next: NextFunction): void => {
   const token = req.headers.authorization?.split(' ')[1];
 
@@ -34,10 +36,11 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction): vo
   }
 };
 
-export const checkRole = (role: 'admin' | 'user') => {
+// Middleware untuk memeriksa apakah role yang diberikan termasuk yang diperbolehkan
+export const checkRoles = (...allowedRoles: string[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     const userRole = req.user?.role;
-    if (userRole !== role) {
+    if (!userRole || !allowedRoles.includes(userRole)) {
       res.status(403).json({ error: 'Akses ditolak. Role tidak sesuai.' });
       return;
     }
@@ -45,8 +48,7 @@ export const checkRole = (role: 'admin' | 'user') => {
   };
 };
 
-
-
+// Fungsi untuk menangani refresh token
 export const handleRefreshToken = async (refreshToken: string): Promise<{ accessToken: string, refreshToken: string }> => {
   if (!refreshToken) {
     throw new Error('Refresh token tidak ditemukan');

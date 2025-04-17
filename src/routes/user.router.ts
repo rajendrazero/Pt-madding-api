@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken, checkRole } from '../middlewares/auth.middleware';
+import { verifyToken, checkRoles } from '../middlewares/auth.middleware';
 import { upload } from '../middlewares/upload.middleware';
 import {
   getUserByIdHandler,
@@ -22,24 +22,23 @@ const router = Router();
 router.use(verifyToken);
 
 // ==================
-// Route khusus user
+// Route untuk user & admin
 // ==================
-router.get('/', checkRole('user'), (req, res) => {
+router.get('/', checkRoles('user', 'admin'), (req, res) => {
   const user = req.user;
   res.status(200).json({ message: 'Profile user', user });
 });
 
-router.post('/upload', checkRole('user'), upload.single('photo'), uploadProfileImage);
-router.put('/profile', checkRole('user'), updateOwnProfile);
-router.get('/:id', checkRole('user'), getUserByIdHandler);
-router.delete('/:id', checkRole('user'), deleteUser);
+router.post('/upload', checkRoles('user', 'admin'), upload.single('photo'), uploadProfileImage);
+router.put('/profile', checkRoles('user', 'admin'), updateOwnProfile);
+router.get('/:id', checkRoles('user', 'admin'), getUserByIdHandler);
+router.delete('/:id', checkRoles('user', 'admin'), deleteUser);
 
 // ==================
 // Route khusus admin
 // ==================
-router.use(checkRole('admin')); // Semua route di bawah hanya bisa diakses admin
+router.use(checkRoles('admin')); // Semua route di bawah ini hanya untuk admin
 
-router.post('/upload', upload.single('photo'), uploadProfileImage); // Admin upload avatar user
 router.get('/users', getAllUsers);
 router.get('/users/deleted', getDeletedUsers);
 router.get('/users/search', getUsersPaginated);
