@@ -4,6 +4,7 @@ import {
   getAllUsers,
   updateOwnProfile,
   deleteUser,
+  getUserByIdHandler,  // Import handler yang baru
 } from '../controllers/user.controller';
 import {
   refreshToken
@@ -20,7 +21,8 @@ router.get('/', checkRole('user'), (req, res) => {
   res.status(200).json({ message: 'Profile user', user });
 });
 
-router.get('/data', getAllUsers);
+// Route untuk mendapatkan user berdasarkan ID (user hanya bisa melihat dirinya sendiri)
+router.get('/:id', checkRole('user'), getUserByIdHandler); // Menambahkan route baru
 
 // Route untuk update profile user (hanya bisa diakses oleh user itu sendiri)
 router.put('/profile', checkRole('user'), updateOwnProfile);

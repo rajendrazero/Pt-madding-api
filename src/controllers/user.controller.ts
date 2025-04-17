@@ -6,7 +6,8 @@ softDeleteUserById,
 getUsersWithFilterAndPagination,
 recoverUserById,
 updateOwnProfileById,
-getDeletedUsersService
+getDeletedUsersService,
+getUserById
 } from '../services/user.service';
 import { v4 as uuidv4 } from 'uuid';
 import { 
@@ -144,3 +145,19 @@ export const getDeletedUsers: RequestHandler = async (req, res): Promise<void> =
 };
 
 
+export const getUserByIdHandler: RequestHandler = async (req, res) => {
+  const { id } = req.params;
+  const { includeDeleted } = req.query; // Menggunakan query untuk menentukan apakah termasuk yang terhapus
+
+  try {
+    const user = await getUserById(id, includeDeleted === 'true'); // Cek apakah includeDeleted = 'true'
+    if (user) {
+      res.status(200).json(user); // Jika user ditemukan, kirimkan data
+    } else {
+      res.status(404).json({ error: 'User tidak ditemukan' }); // Jika tidak ditemukan
+    }
+  } catch (error) {
+    console.error('Gagal mengambil user:', error);
+    res.status(500).json({ error: 'Terjadi kesalahan saat mengambil user' });
+  }
+};

@@ -47,7 +47,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getDeletedUsers = exports.recoverUser = exports.deleteUser = exports.updateOwnProfile = exports.updateUser = exports.getUsersPaginated = exports.getAllUsers = void 0;
+exports.getUserByIdHandler = exports.getDeletedUsers = exports.recoverUser = exports.deleteUser = exports.updateOwnProfile = exports.updateUser = exports.getUsersPaginated = exports.getAllUsers = void 0;
 var user_service_1 = require("../services/user.service");
 var user_validation_1 = require("../validations/user.validation");
 var zod_1 = require("zod");
@@ -243,3 +243,33 @@ var getDeletedUsers = function (req, res) { return __awaiter(void 0, void 0, Pro
     });
 }); };
 exports.getDeletedUsers = getDeletedUsers;
+var getUserByIdHandler = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var id, includeDeleted, user, error_8;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                id = req.params.id;
+                includeDeleted = req.query.includeDeleted;
+                _a.label = 1;
+            case 1:
+                _a.trys.push([1, 3, , 4]);
+                return [4 /*yield*/, (0, user_service_1.getUserById)(id, includeDeleted === 'true')];
+            case 2:
+                user = _a.sent();
+                if (user) {
+                    res.status(200).json(user); // Jika user ditemukan, kirimkan data
+                }
+                else {
+                    res.status(404).json({ error: 'User tidak ditemukan' }); // Jika tidak ditemukan
+                }
+                return [3 /*break*/, 4];
+            case 3:
+                error_8 = _a.sent();
+                console.error('Gagal mengambil user:', error_8);
+                res.status(500).json({ error: 'Terjadi kesalahan saat mengambil user' });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); };
+exports.getUserByIdHandler = getUserByIdHandler;

@@ -289,3 +289,18 @@ export async function getDeletedUsersService(query: any) {
     totalPages: Math.ceil(total / limitNum),
   };
 }
+
+
+export async function getUserById(
+  id: string,
+  includeDeleted: boolean = false
+) {
+  const res = await pool.query(
+    `SELECT id, username, email, role, is_verified, created_at,
+            photo_url, gender, class, description
+     FROM users
+     WHERE id = $1 ${includeDeleted ? '' : 'AND is_deleted = false'}`,
+    [id]
+  );
+  return res.rows[0];
+}

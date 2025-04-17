@@ -9,6 +9,8 @@ const router = (0, express_1.Router)();
 router.use(auth_middleware_1.verifyToken, (0, auth_middleware_1.checkRole)('admin'));
 // Route untuk mendapatkan semua user
 router.get('/', user_controller_1.getAllUsers);
+// Route untuk mendapatkan user berdasarkan ID (admin bisa melihat semua user)
+router.get('/:id', user_controller_1.getUserByIdHandler); // Menambahkan route baru
 // Route untuk update user berdasarkan ID
 router.put('/:id', user_controller_1.updateUser);
 // Route untuk menghapus user berdasarkan ID (admin bisa hapus user lain)

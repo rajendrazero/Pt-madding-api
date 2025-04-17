@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getDeletedUsers = exports.recoverUser = exports.deleteUser = exports.updateOwnProfile = exports.updateUser = exports.getUsersPaginated = exports.getAllUsers = void 0;
+exports.getUserByIdHandler = exports.getDeletedUsers = exports.recoverUser = exports.deleteUser = exports.updateOwnProfile = exports.updateUser = exports.getUsersPaginated = exports.getAllUsers = void 0;
 const user_service_1 = require("../services/user.service");
 const user_validation_1 = require("../validations/user.validation");
 const zod_1 = require("zod");
@@ -128,3 +128,21 @@ const getDeletedUsers = (req, res) => __awaiter(void 0, void 0, void 0, function
     }
 });
 exports.getDeletedUsers = getDeletedUsers;
+const getUserByIdHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.params;
+    const { includeDeleted } = req.query; // Menggunakan query untuk menentukan apakah termasuk yang terhapus
+    try {
+        const user = yield (0, user_service_1.getUserById)(id, includeDeleted === 'true'); // Cek apakah includeDeleted = 'true'
+        if (user) {
+            res.status(200).json(user); // Jika user ditemukan, kirimkan data
+        }
+        else {
+            res.status(404).json({ error: 'User tidak ditemukan' }); // Jika tidak ditemukan
+        }
+    }
+    catch (error) {
+        console.error('Gagal mengambil user:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan saat mengambil user' });
+    }
+});
+exports.getUserByIdHandler = getUserByIdHandler;

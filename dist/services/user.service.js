@@ -17,6 +17,7 @@ exports.softDeleteUserById = softDeleteUserById;
 exports.recoverUserById = recoverUserById;
 exports.deleteOldSoftDeletedUsers = deleteOldSoftDeletedUsers;
 exports.getDeletedUsersService = getDeletedUsersService;
+exports.getUserById = getUserById;
 const db_1 = require("../utils/db");
 // Pool adalah koneksi ke PostgreSQL
 function fetchAllUsers() {
@@ -229,5 +230,14 @@ function getDeletedUsersService(query) {
             currentPage: pageNum,
             totalPages: Math.ceil(total / limitNum),
         };
+    });
+}
+function getUserById(id_1) {
+    return __awaiter(this, arguments, void 0, function* (id, includeDeleted = false) {
+        const res = yield db_1.pool.query(`SELECT id, username, email, role, is_verified, created_at,
+            photo_url, gender, class, description
+     FROM users
+     WHERE id = $1 ${includeDeleted ? '' : 'AND is_deleted = false'}`, [id]);
+        return res.rows[0];
     });
 }

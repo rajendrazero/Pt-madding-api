@@ -45,7 +45,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     return to.concat(ar || Array.prototype.slice.call(from));
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getDeletedUsersService = exports.deleteOldSoftDeletedUsers = exports.recoverUserById = exports.softDeleteUserById = exports.updateOwnProfileById = exports.updateUserById = exports.getUsersWithFilterAndPagination = exports.fetchAllUsers = void 0;
+exports.getUserById = exports.getDeletedUsersService = exports.deleteOldSoftDeletedUsers = exports.recoverUserById = exports.softDeleteUserById = exports.updateOwnProfileById = exports.updateUserById = exports.getUsersWithFilterAndPagination = exports.fetchAllUsers = void 0;
 var db_1 = require("../utils/db");
 // Pool adalah koneksi ke PostgreSQL
 function fetchAllUsers() {
@@ -312,3 +312,18 @@ function getDeletedUsersService(query) {
     });
 }
 exports.getDeletedUsersService = getDeletedUsersService;
+function getUserById(id, includeDeleted) {
+    if (includeDeleted === void 0) { includeDeleted = false; }
+    return __awaiter(this, void 0, void 0, function () {
+        var res;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, db_1.pool.query("SELECT id, username, email, role, is_verified, created_at,\n            photo_url, gender, class, description\n     FROM users\n     WHERE id = $1 ".concat(includeDeleted ? '' : 'AND is_deleted = false'), [id])];
+                case 1:
+                    res = _a.sent();
+                    return [2 /*return*/, res.rows[0]];
+            }
+        });
+    });
+}
+exports.getUserById = getUserById;

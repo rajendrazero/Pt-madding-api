@@ -5,7 +5,8 @@ import {
   deleteUser, 
   getUsersPaginated,
   recoverUser,
-  getDeletedUsers
+  getDeletedUsers,
+  getUserByIdHandler,  // Import handler yang baru
 } from '../controllers/user.controller';
 import {
   refreshToken
@@ -19,6 +20,9 @@ router.use(verifyToken, checkRole('admin'));
 
 // Route untuk mendapatkan semua user
 router.get('/', getAllUsers);
+
+// Route untuk mendapatkan user berdasarkan ID (admin bisa melihat semua user)
+router.get('/:id', getUserByIdHandler); // Menambahkan route baru
 
 // Route untuk update user berdasarkan ID
 router.put('/:id', updateUser);
