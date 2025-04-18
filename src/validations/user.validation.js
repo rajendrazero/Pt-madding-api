@@ -8,7 +8,7 @@ exports.updateUserSchema = zod_1.z.object({
     email: zod_1.z.string().email().optional(),
     password: zod_1.z.string().min(6).optional(),
     photo_url: zod_1.z.string().url().optional(),
-    gender: zod_1.z.enum(['male', 'female', 'other']).optional(),
+    gender: zod_1.z.string().optional(),
     class: zod_1.z.string().max(50).optional(),
     description: zod_1.z.string().optional(),
 }).refine(function (data) { return Object.keys(data).some(function (key) { return data[key] !== undefined; }); }, {
@@ -26,7 +26,7 @@ exports.updateOwnProfileSchema = zod_1.z.object({
     email: zod_1.z.string().email().optional(),
     password: zod_1.z.string().min(6).optional(),
     photo_url: zod_1.z.string().url().optional(),
-    gender: zod_1.z.enum(['Laki-Laki', 'Perempuan', 'Lainnya']).optional(),
+    gender: zod_1.z.string().optional(),
     class: zod_1.z.string().max(50).optional(),
     description: zod_1.z.string().optional(),
 }).refine(function (data) { return Object.keys(data).some(function (key) { return data[key] !== undefined; }); }, {
