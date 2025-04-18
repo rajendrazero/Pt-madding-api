@@ -27,7 +27,7 @@ export const updateOwnProfileSchema = z.object({
   email: z.string().email().optional(),
   password: z.string().min(6).optional(),
   photo_url: z.string().url().optional(),
-  gender: z.enum(['male', 'female', 'other']).optional(),
+  gender: z.enum(['Laki-Laki', 'Perempuan', 'Lainnya']).optional(),
   class: z.string().max(50).optional(),
   description: z.string().optional(),
 }).refine(data => Object.keys(data).some(key => data[key as keyof typeof data] !== undefined), {
