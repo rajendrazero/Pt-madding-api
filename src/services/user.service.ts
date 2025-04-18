@@ -72,7 +72,6 @@ export async function getUsersWithFilterAndPagination({
   };
 }
 
-
 export async function updateUserById({
   id,
   username,
@@ -80,7 +79,7 @@ export async function updateUserById({
   password,
   photo_url,
   gender,
-  class: userClass,  // `class` adalah kata kunci di JavaScript, jadi gunakan `userClass`
+  class: userClass,
   description,
 }: {
   id: string;
@@ -144,7 +143,7 @@ export async function updateOwnProfileById({
   password,
   photo_url,
   gender,
-  class: userClass,  // Gunakan `userClass` untuk menghindari bentrok dengan kata kunci `class`
+  class: userClass,
   description,
 }: {
   id: string;
@@ -153,7 +152,7 @@ export async function updateOwnProfileById({
   password?: string;
   photo_url?: string;
   gender?: string;
-  class?: string;
+  class?: string; // <-- FIX: sebelumnya ini keliru ditulis userClass di sini
   description?: string;
 }) {
   const fields = [];

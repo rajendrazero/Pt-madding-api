@@ -108,8 +108,7 @@ function getUsersWithFilterAndPagination(_a) {
 }
 exports.getUsersWithFilterAndPagination = getUsersWithFilterAndPagination;
 function updateUserById(_a) {
-    var id = _a.id, username = _a.username, email = _a.email, password = _a.password, photo_url = _a.photo_url, gender = _a.gender, userClass = _a.class, // `class` adalah kata kunci di JavaScript, jadi gunakan `userClass`
-    description = _a.description;
+    var id = _a.id, username = _a.username, email = _a.email, password = _a.password, photo_url = _a.photo_url, gender = _a.gender, userClass = _a.class, description = _a.description;
     return __awaiter(this, void 0, void 0, function () {
         var fields, values, idx, query;
         return __generator(this, function (_b) {
@@ -160,8 +159,7 @@ function updateUserById(_a) {
 }
 exports.updateUserById = updateUserById;
 function updateOwnProfileById(_a) {
-    var id = _a.id, username = _a.username, email = _a.email, password = _a.password, photo_url = _a.photo_url, gender = _a.gender, userClass = _a.class, // Gunakan `userClass` untuk menghindari bentrok dengan kata kunci `class`
-    description = _a.description;
+    var id = _a.id, username = _a.username, email = _a.email, password = _a.password, photo_url = _a.photo_url, gender = _a.gender, userClass = _a.class, description = _a.description;
     return __awaiter(this, void 0, void 0, function () {
         var fields, values, idx, query;
         return __generator(this, function (_b) {
